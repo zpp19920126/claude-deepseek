@@ -10,3 +10,7 @@
 
 # WeChat Mini Program
 plane-shooter/.miniprogram/
+__pycache__/
+meeting_notes_*.md
+recording_*.wav
+*.log

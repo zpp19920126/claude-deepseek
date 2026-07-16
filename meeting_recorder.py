@@ -1,295 +1,410 @@
 #!/usr/bin/env python3
 """
-实时会议录音 + 转写 + 纪要生成
-================================
+实时会议录音 + 讯飞 RTASR 大模型转写 + AI 纪要
+==============================================
 用法:
-  # 使用 OpenAI Whisper API（需要 API Key）
-  export OPENAI_API_KEY=sk-xxx
   python3 meeting_recorder.py
+  python3 meeting_recorder.py --deepseek-key sk-xxx   # + AI 总结
 
-  # 或传入 API Key
-  python3 meeting_recorder.py --api-key sk-xxx
-
-  # 使用本地 Whisper 模型（首次需下载模型，约 1.5GB）
-  pip3 install openai-whisper
-  python3 meeting_recorder.py --local
-
-  # 指定输出文件和音频设备
-  python3 meeting_recorder.py --output training_notes.md --device 2
-
-运行后按 Ctrl+C 停止录音，自动生成会议纪要。
+Ctrl+C 停止。
 """
 
-import sounddevice as sd
-import numpy as np
-import wave
-import tempfile
+import hashlib
+import hmac
+import base64
+import json
 import os
 import sys
 import time
+import ssl
 import threading
-import queue
 import argparse
-from datetime import datetime
-from pathlib import Path
+import uuid
+import urllib.parse
+import datetime
+from datetime import datetime as dt
+
+import numpy as np
+import sounddevice as sd
+from websocket import create_connection, WebSocketException
 
 # ============================================================
-# 配置
+# 讯飞 RTASR 大模型凭证
+# apikey:  bf103946445d2272fca03632bc721891
+# secret:  OGZhMTVmNjg1ODQ0NDE4Y2I5MjMzZjU0
 # ============================================================
-SAMPLE_RATE = 16000          # Whisper 推荐 16kHz
-CHANNELS = 1                 # 单声道
-CHUNK_SECONDS = 15           # 每段录音时长（秒）
-OVERLAP_SECONDS = 2          # 片段重叠时长（避免切掉句子）
-AUDIO_DTYPE = np.int16       # 16-bit PCM
+APP_ID = "958a1342"
+ACCESS_KEY_ID = "bf103946445d2272fca03632bc721891"       # apikey
+ACCESS_KEY_SECRET = "OGZhMTVmNjg1ODQ0NDE4Y2I5MjMzZjU0"  # apisecret
 
-# ============================================================
-# 转写线程
-# ============================================================
-def transcriber_worker(
-    audio_queue: queue.Queue,
-    output_file: str,
-    client,
-    use_local: bool,
-):
-    """后台线程：从队列取音频片段，转写后写入文件"""
-    segment_index = 0
+SAMPLE_RATE = 16000
+AUDIO_FRAME_SIZE = 1280
 
-    while True:
-        item = audio_queue.get()
-        if item is None:  # 结束信号
-            break
+FIXED_PARAMS = {
+    "audio_encode": "pcm_s16le",
+    "lang": "autodialect",
+    "samplerate": "16000",
+}
 
-        audio_data, timestamp_str = item
-        segment_index += 1
+SSL_OPT = {"cert_reqs": ssl.CERT_NONE, "check_hostname": False}
 
-        # 保存为临时 WAV 文件
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            wav_path = tmp.name
-            with wave.open(wav_path, "wb") as wf:
-                wf.setnchannels(CHANNELS)
-                wf.setsampwidth(2)  # 16-bit = 2 bytes
-                wf.setframerate(SAMPLE_RATE)
-                wf.writeframes(audio_data.tobytes())
 
+def get_utc_time() -> str:
+    tz = datetime.timezone(datetime.timedelta(hours=8))
+    return dt.now(tz).strftime("%Y-%m-%dT%H:%M:%S%z")
+
+
+def build_url() -> str:
+    params = {
+        "accessKeyId": ACCESS_KEY_ID,
+        "appId": APP_ID,
+        "uuid": uuid.uuid4().hex,
+        "utc": get_utc_time(),
+        **FIXED_PARAMS,
+    }
+    sorted_params = dict(sorted(
+        (k, v) for k, v in params.items() if v is not None and str(v).strip()
+    ))
+    base_str = "&".join(
+        f"{urllib.parse.quote(k, safe='')}={urllib.parse.quote(v, safe='')}"
+        for k, v in sorted_params.items()
+    )
+    sig = hmac.new(
+        ACCESS_KEY_SECRET.encode("utf-8"),
+        base_str.encode("utf-8"),
+        hashlib.sha1,
+    ).digest()
+    params["signature"] = base64.b64encode(sig).decode("utf-8")
+    return f"wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1?{urllib.parse.urlencode(params)}"
+
+
+class Transcriber:
+    def __init__(self, output_file: str):
+        self.output_file = output_file
+        self.ws = None
+        self.connected = False
+        self.session_id = None
+        self.last_text = ""
+        self.last_flush = 0.0
+
+    def connect(self) -> bool:
         try:
-            if use_local:
-                text = _transcribe_local(wav_path)
-            else:
-                text = _transcribe_api(client, wav_path)
-
-            if text and text.strip():
-                # 追加到纪要文件
-                with open(output_file, "a", encoding="utf-8") as f:
-                    f.write(f"\n### [{timestamp_str}]\n")
-                    f.write(f"{text.strip()}\n")
-                print(f"  ✓ [{timestamp_str}] {text.strip()[:80]}...")
-
+            self.ws = create_connection(
+                build_url(), timeout=15, enable_multithread=True, sslopt=SSL_OPT,
+            )
+            self.connected = True
+            print("  ● 已连接")
+            time.sleep(0.5)
+            t = threading.Thread(target=self._recv_loop, daemon=True)
+            t.start()
+            return True
+        except WebSocketException as e:
+            print(f"  ✗ 连接失败: {e}")
+            return False
         except Exception as e:
-            print(f"  ✗ 转写失败 [{timestamp_str}]: {e}")
+            print(f"  ✗ 异常: {e}")
+            return False
 
-        finally:
-            os.unlink(wav_path)  # 清理临时文件
+    def _recv_loop(self):
+        while self.connected and self.ws:
+            try:
+                msg = self.ws.recv()
+                if not msg:
+                    self.connected = False
+                    break
+                if isinstance(msg, bytes):
+                    continue
 
+                try:
+                    data = json.loads(msg)
+                except json.JSONDecodeError:
+                    continue
 
-def _transcribe_api(client, wav_path: str) -> str:
-    """通过 OpenAI Whisper API 转写"""
-    with open(wav_path, "rb") as audio_file:
-        transcript = client.audio.transcriptions.create(
-            model="whisper-1",
-            file=audio_file,
-            response_format="text",
-            language="zh",  # 中文为主，自动检测
-        )
-    return transcript if isinstance(transcript, str) else str(transcript)
+                msg_type = data.get("msg_type", "")
 
+                # 启动消息：提取 sessionId
+                if msg_type == "action":
+                    inner = data.get("data", {})
+                    if isinstance(inner, dict):
+                        sid = inner.get("sessionId", "")
+                        if sid:
+                            self.session_id = sid
+                    continue
 
-def _transcribe_local(wav_path: str) -> str:
-    """通过本地 Whisper 转写"""
-    import whisper
+                # 错误
+                if msg_type == "error":
+                    print(f"\n  ✗ [{data.get('code','')}] {data.get('desc','')}")
+                    continue
 
-    if not hasattr(_transcribe_local, "_model"):
-        print("加载本地 Whisper 模型（首次较慢）...")
-        _transcribe_local._model = whisper.load_model("medium")  # small/medium/large
-        print("模型加载完成")
+                # 转写结果
+                if msg_type != "result":
+                    continue
 
-    model = _transcribe_local._model
-    result = model.transcribe(wav_path, language="zh", task="transcribe")
-    return result["text"]
+                result = data.get("data")
+                if not isinstance(result, dict):
+                    continue
+
+                rt_list = result.get("cn", {}).get("st", {}).get("rt", [])
+                words = []
+                for seg in rt_list:
+                    for ws_item in seg.get("ws", []):
+                        for cw in ws_item.get("cw", []):
+                            w = cw.get("w", "")
+                            if w:
+                                words.append(w)
+
+                text = "".join(words).strip()
+                if not text or len(text) < 2:
+                    continue
+
+                self.last_text = text
+                if result.get("ls"):
+                    # 完整句子：立即写入
+                    now = dt.now().strftime("%H:%M:%S")
+                    with open(self.output_file, "a", encoding="utf-8") as f:
+                        f.write(f"✓ [{now}] {text}\n\n")
+                    print(f"\n  ✓ [{now}] {text}")
+                    self.last_text = ""
+                    self.last_flush = 0
+                else:
+                    # 中间结果：屏幕实时显示 + 每 2 秒写入一次文件
+                    sys.stdout.write(f"\r  … {text}     ")
+                    sys.stdout.flush()
+                    now = time.time()
+                    if now - self.last_flush > 2.0:
+                        with open(self.output_file, "a", encoding="utf-8") as f:
+                            f.write(f"… [{dt.now().strftime('%H:%M:%S')}] {text}\n")
+                        self.last_flush = now
+
+            except WebSocketException:
+                self.connected = False
+                break
+            except OSError:
+                self.connected = False
+                break
+            except Exception:
+                self.connected = False
+                break
+
+    def send_audio(self, pcm_bytes: bytes):
+        if self.connected and self.ws:
+            try:
+                self.ws.send_binary(pcm_bytes)
+            except Exception:
+                self.connected = False
+
+    def end_session(self):
+        if self.connected and self.ws:
+            try:
+                m = {"end": True}
+                if self.session_id:
+                    m["sessionId"] = self.session_id
+                self.ws.send(json.dumps(m, ensure_ascii=False))
+                self.session_id = None
+            except Exception:
+                pass
+
+    def close(self):
+        self.connected = False
+        if self.ws:
+            try:
+                self.ws.close()
+            except Exception:
+                pass
+
+    def flush(self):
+        if self.last_text and self.last_text.strip():
+            now = dt.now().strftime("%H:%M:%S")
+            with open(self.output_file, "a", encoding="utf-8") as f:
+                f.write(f"✓ [{now}] {self.last_text.strip()}\n\n")
+            print(f"\n  ✓ [{now}] {self.last_text.strip()}")
+            self.last_text = ""
+
+    def dedup(self):
+        """去除被完整句或更长版本覆盖的中间片段"""
+        try:
+            with open(self.output_file, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            complete = set()
+            for line in lines:
+                if line.startswith("✓"):
+                    complete.add(line[16:].strip())
+
+            kept = []
+            for line in lines:
+                if line.startswith("…"):
+                    txt = line[16:].strip()
+                    if txt in complete:
+                        continue
+                kept.append(line)
+
+            # 合并连续的 … 行：只保留每组最后（最长）的一条
+            merged = []
+            i = 0
+            while i < len(kept):
+                line = kept[i]
+                if line.startswith("…"):
+                    # 向后找所有连续的 … 行
+                    group = [line]
+                    j = i + 1
+                    while j < len(kept) and kept[j].startswith("…"):
+                        group.append(kept[j])
+                        j += 1
+                    # 只保留最后（最长）的
+                    merged.append(group[-1])
+                    i = j
+                else:
+                    merged.append(line)
+                    i += 1
+
+            with open(self.output_file, "w", encoding="utf-8") as f:
+                f.writelines(merged)
+        except Exception:
+            pass
 
 
 # ============================================================
-# 主流程
+def summarize(path: str, api_key: str) -> str:
+    from openai import OpenAI
+    with open(path, "r", encoding="utf-8") as f:
+        raw = f.read()
+    if len(raw) < 200:
+        return raw
+    print("\n  🤖 DeepSeek 生成结构化纪要...")
+    prompt = f"""你是专业会议纪要助手。请将以下语音转写整理为结构化纪要：
+1. 提炼核心主题，分节列小标题
+2. 保留数字、日期、人名、决策
+3. 要点列表，不编造
+4. 末尾附待办事项
+
+转写：
+---
+{raw}
+---
+Markdown 输出。"""
+    try:
+        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+        r = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3, max_tokens=4096,
+        )
+        return r.choices[0].message.content
+    except Exception as e:
+        print(f"  ✗ DeepSeek: {e}")
+        return raw
+
+
 # ============================================================
 def main():
-    parser = argparse.ArgumentParser(
-        description="实时会议录音转写工具"
-    )
-    parser.add_argument(
-        "--output", "-o",
-        default=None,
-        help="输出 Markdown 文件路径（默认: meeting_notes_YYYYMMDD_HHMMSS.md）",
-    )
-    parser.add_argument(
-        "--chunk-seconds",
-        type=int,
-        default=CHUNK_SECONDS,
-        help=f"每段录音秒数（默认 {CHUNK_SECONDS}）",
-    )
-    parser.add_argument(
-        "--device", "-d",
-        type=int,
-        default=None,
-        help="音频输入设备 ID（不指定则列出设备供选择）",
-    )
-    parser.add_argument(
-        "--api-key",
-        default=os.environ.get("OPENAI_API_KEY", ""),
-        help="OpenAI API Key（也可通过 OPENAI_API_KEY 环境变量设置）",
-    )
-    parser.add_argument(
-        "--local",
-        action="store_true",
-        help="使用本地 Whisper 模型而非 API",
-    )
-    parser.add_argument(
-        "--list-devices",
-        action="store_true",
-        help="列出所有音频设备后退出",
-    )
-    args = parser.parse_args()
+    p = argparse.ArgumentParser(description="会议录音 + RTASR 大模型转写")
+    p.add_argument("-o", "--output", default=None)
+    p.add_argument("-d", "--device", type=int, default=None)
+    p.add_argument("--list-devices", action="store_true")
+    p.add_argument("--deepseek-key", default=os.environ.get("DEEPSEEK_API_KEY", ""))
+    p.add_argument("--no-summary", action="store_true")
+    args = p.parse_args()
 
-    # 列出设备
     if args.list_devices:
-        print("\n可用音频设备:\n")
-        devices = sd.query_devices()
-        for i, d in enumerate(devices):
-            ch_in = d.get("max_input_channels", 0)
-            ch_out = d.get("max_output_channels", 0)
-            label = "🎤 输入" if ch_in > 0 else "🔊 输出"
-            print(f"  {i}: {d['name']} ({label} | {ch_in}in/{ch_out}out)")
-        print()
+        print("\n音频设备:")
+        for i, d in enumerate(sd.query_devices()):
+            ci, co = d.get("max_input_channels", 0), d.get("max_output_channels", 0)
+            print(f"  {i}: {d['name']} ({'🎤输入' if ci else '🔊输出'})")
         return
 
-    # 验证模式
-    use_local = args.local
-    if use_local:
-        try:
-            import whisper  # noqa: F401
-        except ImportError:
-            print("未安装 whisper，请先安装: pip3 install openai-whisper")
-            sys.exit(1)
-
-    client = None
-    if not use_local:
-        if not args.api_key:
-            print("错误: 请设置 OPENAI_API_KEY 或通过 --api-key 传入")
-            print("或者使用 --local 模式（需安装 openai-whisper）")
-            sys.exit(1)
-        from openai import OpenAI
-
-        client = OpenAI(api_key=args.api_key)
-
-    # 输出文件
     if args.output is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = f"meeting_notes_{timestamp}.md"
+        output_file = f"meeting_notes_{dt.now().strftime('%Y%m%d_%H%M%S')}.md"
     else:
         output_file = args.output
 
-    # 选择设备
     device = args.device
     if device is None:
-        devices = sd.query_devices()
-        print("\n可用音频输入设备:")
-        inputs = [(i, d) for i, d in enumerate(devices) if d.get("max_input_channels", 0) > 0]
+        inputs = [(i, d) for i, d in enumerate(sd.query_devices())
+                  if d.get("max_input_channels", 0) > 0]
         if not inputs:
-            print("  未发现输入设备！")
+            print("❌ 无输入设备")
             sys.exit(1)
+        print("\n输入设备:")
         for i, d in inputs:
             print(f"  {i}: {d['name']}")
-        if len(inputs) == 1:
-            device = inputs[0][0]
-            print(f"自动选择设备 {device}: {inputs[0][1]['name']}")
-        else:
-            choice = input("输入设备编号: ").strip()
-            try:
-                device = int(choice)
-            except ValueError:
-                print("无效输入")
-                sys.exit(1)
+        device = inputs[0][0] if len(inputs) == 1 else int(input("选择: ").strip())
 
-    chunk_frames = args.chunk_seconds * SAMPLE_RATE
-    overlap_frames = OVERLAP_SECONDS * SAMPLE_RATE
+    dev_name = sd.query_devices()[device]["name"]
 
-    # 初始化输出文件
     with open(output_file, "w", encoding="utf-8") as f:
-        f.write(f"# 会议纪要\n\n")
-        f.write(f"**日期**: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}\n")
-        f.write(f"**模式**: {'本地 Whisper' if use_local else 'OpenAI Whisper API'}\n\n")
-        f.write("---\n")
+        f.write(f"# 会议纪要\n\n**日期**: {dt.now().strftime('%Y年%m月%d日 %H:%M')}\n")
+        f.write(f"**引擎**: 讯飞 RTASR 大模型\n")
+        if args.deepseek_key and not args.no_summary:
+            f.write(" + DeepSeek")
+        f.write("\n\n---\n\n")
 
-    # 启动转写线程
-    audio_queue: queue.Queue = queue.Queue()
-    trans_thread = threading.Thread(
-        target=transcriber_worker,
-        args=(audio_queue, output_file, client, use_local),
-        daemon=True,
-    )
-    trans_thread.start()
+    print(f"\n  🔴 {output_file}")
+    print(f"     设备: {dev_name} | Ctrl+C 停止\n")
 
-    # 录音缓冲区（保留 overlap 帧用于下一段）
-    buffer = np.array([], dtype=AUDIO_DTYPE)
+    t = Transcriber(output_file)
+    if not t.connect():
+        sys.exit(1)
 
-    print(f"\n🔴 开始录音 → {output_file}")
-    print(f"   设备: {sd.query_devices()[device]['name']}")
-    print(f"   每段 {args.chunk_seconds} 秒，重叠 {OVERLAP_SECONDS} 秒")
-    print(f"   按 Ctrl+C 停止\n")
-
-    stream = sd.InputStream(
-        samplerate=SAMPLE_RATE,
-        channels=CHANNELS,
-        dtype=AUDIO_DTYPE,
-        device=device,
-    )
+    stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype=np.int16, device=device)
     stream.start()
+
+    start_ms = time.time() * 1000
+    frame_idx = 0
+    running = True
+
+    def sender():
+        nonlocal start_ms, frame_idx, running
+        try:
+            while running:
+                if not t.connected:
+                    print("\n  ⟳ 重连中...")
+                    t.close()
+                    time.sleep(1)
+                    if t.connect():
+                        start_ms = time.time() * 1000
+                        frame_idx = 0
+                    else:
+                        time.sleep(3)
+                        continue
+
+                expected = start_ms + (frame_idx * 40)
+                diff = expected - time.time() * 1000
+                if diff > 0.1:
+                    time.sleep(diff / 1000)
+
+                chunk, _ = stream.read(640)
+                t.send_audio(chunk.tobytes())
+                frame_idx += 1
+
+        except Exception as e:
+            print(f"\n  ✗ 发送异常: {e}")
+
+    st = threading.Thread(target=sender, daemon=True)
+    st.start()
 
     try:
         while True:
-            # 读取一块音频
-            frames_needed = chunk_frames
-            new_data, _ = stream.read(frames_needed)
-            new_data = new_data.flatten()
-
-            # 拼上之前保留的 overlap
-            segment = np.concatenate([buffer, new_data]) if len(buffer) > 0 else new_data
-
-            # 保留最后 overlap 帧给下一段
-            if len(segment) > overlap_frames:
-                buffer = segment[-overlap_frames:]
-                segment = segment[:-overlap_frames]
-            else:
-                buffer = np.array([], dtype=AUDIO_DTYPE)
-
-            timestamp_str = datetime.now().strftime("%H:%M:%S")
-            audio_queue.put((segment, timestamp_str))
-
+            time.sleep(0.5)
     except KeyboardInterrupt:
-        print("\n⏹ 停止录音...")
+        print("\n  ⏸ 停止...")
 
-    finally:
-        stream.stop()
-        stream.close()
+    running = False
+    st.join(timeout=3)
+    t.end_session()
+    time.sleep(1)
+    stream.stop()
+    stream.close()
+    t.flush()
+    t.dedup()
+    t.close()
 
-        # 处理缓冲区剩余音频
-        if len(buffer) > SAMPLE_RATE:  # 至少 1 秒
-            timestamp_str = datetime.now().strftime("%H:%M:%S")
-            audio_queue.put((buffer, timestamp_str))
-
-        # 通知转写线程结束
-        audio_queue.put(None)
-        trans_thread.join(timeout=30)
-
-        print(f"\n✅ 纪要已保存至: {output_file}")
+    if args.deepseek_key and not args.no_summary:
+        s = summarize(output_file, args.deepseek_key)
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(s)
+        print(f"\n  ✅ {output_file}")
+    else:
+        print(f"\n  ✅ {output_file}")
 
 
 if __name__ == "__main__":
