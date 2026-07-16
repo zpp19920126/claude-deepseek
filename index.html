@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triple Triad - Final Fantasy VIII</title>
+<style>
+/* ============================================================
+   CSS RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0d1a;
+  --surface: #1a1a2e;
+  --text: #e0e0e0;
+  --text-dim: #888;
+  --player-color: #4da6ff;
+  --player-glow: rgba(77, 166, 255, 0.6);
+  --opponent-color: #ff4d4d;
+  --opponent-glow: rgba(255, 77, 77, 0.6);
+  --valid-color: #4dff88;
+  --gold: #ffd700;
+  --cell-bg: #12122a;
+  --cell-border: #2a2a4a;
+  --stat-color: #fff;
+  --card-width: 100px;
+  --card-height: 130px;
+}
+
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(100, 100, 200, 0.15), transparent 60%),
+    radial-gradient(ellipse at 50% 100%, rgba(200, 100, 100, 0.1), transparent 60%);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+#app {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+#header {
+  text-align: center;
+}
+#header h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #ffd700, #ff8c00, #ffd700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  margin-bottom: 2px;
+}
+#header .subtitle {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   RULES BAR
+   ============================================================ */
+#rules-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.7rem;
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+#rules-bar label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+#rules-bar label.active { opacity: 1; color: var(--gold); }
+#rules-bar input { display: none; }
+.rule-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #555;
+  transition: background 0.2s;
+}
+#rules-bar label.active .rule-dot { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+
+#rules-bar .sep {
+  width: 1px;
+  height: 14px;
+  background: #333;
+  margin: 0 4px;
+}
+
+#difficulty-select {
+  background: #222;
+  color: #ccc;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+/* ============================================================
+   SCORE AREA
+   ============================================================ */
+.score-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+.score-area .label {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.score-area .score {
+  font-size: 1.6rem;
+  font-weight: 700;
+  transition: all 0.3s;
+}
+#opponent-score .score { color: var(--opponent-color); }
+#player-score .score { color: var(--player-color); }
+.score-animate { animation: scorePop 0.4s ease; }
+
+@keyframes scorePop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+/* ============================================================
+   BOARD (3x3 Grid)
+   ============================================================ */
+#board-container {
+  position: relative;
+}
+
+/* Elemental indicator on cells */
+.cell[data-element]::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+.cell[data-element="fire"]::after { background: #ff4500; box-shadow: 0 0 4px #ff4500; }
+.cell[data-element="ice"]::after { background: #00bfff; box-shadow: 0 0 4px #00bfff; }
+.cell[data-element="lightning"]::after { background: #ffd700; box-shadow: 0 0 4px #ffd700; }
+.cell[data-element="earth"]::after { background: #8b4513; box-shadow: 0 0 4px #8b4513; }
+.cell[data-element="water"]::after { background: #1e90ff; box-shadow: 0 0 4px #1e90ff; }
+.cell[data-element="wind"]::after { background: #90ee90; box-shadow: 0 0 4px #90ee90; }
+.cell[data-element="poison"]::after { background: #9932cc; box-shadow: 0 0 4px #9932cc; }
+.cell[data-element="holy"]::after { background: #fff; box-shadow: 0 0 4px #fff; }
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(3, var(--card-width));
+  grid-template-rows: repeat(3, var(--card-height));
+  gap: 6px;
+  background: #1a1a30;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 30px rgba(0,0,0,0.3);
+}
+
+/* ============================================================
+   BOARD CELLS
+   ============================================================ */
+.cell {
+  position: relative;
+  width: var(--card-width);
+  height: var(--card-height);
+  border: 2px dashed var(--cell-border);
+  border-radius: 8px;
+  background: var(--cell-bg);
+  cursor: default;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  overflow: hidden;
+}
+
+.cell.valid {
+  border-color: var(--valid-color);
+  border-style: solid;
+  cursor: pointer;
+  box-shadow: inset 0 0 20px rgba(77, 255, 136, 0.15);
+  animation: validPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes validPulse {
+  0%, 100% { box-shadow: inset 0 0 20px rgba(77, 255, 136, 0.15); }
+  50% { box-shadow: inset 0 0 35px rgba(77, 255, 136, 0.3); }
+}
+
+.cell:hover.valid {
+  background: rgba(77, 255, 136, 0.08);
+}
+
+.cell.occupied { cursor: default; border-style: solid; }
+
+/* ============================================================
+   CARD (on board)
+   ============================================================ */
+.card-board {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 26px 1fr 26px;
+  grid-template-rows: 22px 1fr 22px;
+  border-radius: 7px;
+  position: relative;
+  border: 2px solid rgba(255,255,255,0.15);
+  transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.card-board .stat {
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--stat-color);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  z-index: 1;
+}
+
+.card-board .stat-top    { grid-column: 2; grid-row: 1; }
+.card-board .stat-bottom { grid-column: 2; grid-row: 3; }
+.card-board .stat-left   { grid-column: 1; grid-row: 2; }
+.card-board .stat-right  { grid-column: 3; grid-row: 2; }
+
+.card-board .card-body {
+  grid-column: 2; grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 2px;
+  gap: 2px;
+}
+
+.card-board .card-name {
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.15;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  max-width: 100%;
+}
+
+.card-board .card-level {
+  font-size: 0.5rem;
+  color: rgba(255,255,255,0.7);
+  font-weight: 600;
+}
+
+.card-board .card-element {
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+/* Owner colors */
+.cell.player .card-board {
+  border-color: rgba(77, 166, 255, 0.6);
+  box-shadow: inset 0 0 15px rgba(77, 166, 255, 0.2);
+}
+.cell.opponent .card-board {
+  border-color: rgba(255, 77, 77, 0.6);
+  box-shadow: inset 0 0 15px rgba(255, 77, 77, 0.2);
+}
+
+/* Card level colors (applied as background to card-board) */
+.card-lv1-3  { background: linear-gradient(135deg, #6b4c1a, #9b7a3a); }
+.card-lv4-5  { background: linear-gradient(135deg, #5a5a6e, #8a8a9e); }
+.card-lv6-7  { background: linear-gradient(135deg, #7a6010, #c9a020); }
+.card-lv8-9  { background: linear-gradient(135deg, #4a3080, #7a5ac0); }
+.card-lv10    { background: linear-gradient(135deg, #8b1a1a, #c0392b); }
+
+/* Flip animation */
+@keyframes flipToPlayer {
+  0%   { transform: rotateY(0deg); }
+  50%  { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+@keyframes flipToOpponent {
+  0%   { transform: rotateY(0deg); }
+  50%  { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+.cell.flip-player .card-board {
+  animation: flipToPlayer 0.5s ease;
+}
+.cell.flip-opponent .card-board {
+  animation: flipToOpponent 0.5s ease;
+}
+
+/* Placement animation */
+@keyframes placeCard {
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.cell.place-anim .card-board {
+  animation: placeCard 0.4s ease-out;
+}
+
+/* ============================================================
+   HAND AREA
+   ============================================================ */
+#hand-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+#player-hand {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Hand card */
+.hand-card {
+  width: 82px;
+  height: 108px;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 22px 1fr 22px;
+  grid-template-rows: 18px 1fr 18px;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.2);
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
+  position: relative;
+}
+.hand-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255,255,255,0.5);
+}
+.hand-card.selected {
+  border-color: var(--player-color) !important;
+  box-shadow: 0 0 18px var(--player-glow);
+  transform: translateY(-8px);
+}
+.hand-card.used {
+  opacity: 0.3;
+  pointer-events: none;
+  transform: none;
+}
+.hand-card .stat {
+  font-weight: 700;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.hand-card .stat-top    { grid-column: 2; grid-row: 1; }
+.hand-card .stat-bottom { grid-column: 2; grid-row: 3; }
+.hand-card .stat-left   { grid-column: 1; grid-row: 2; }
+.hand-card .stat-right  { grid-column: 3; grid-row: 2; }
+.hand-card .card-body {
+  grid-column: 2; grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+.hand-card .card-name {
+  font-size: 0.5rem;
+  font-weight: 600;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.hand-card .card-level {
+  font-size: 0.45rem;
+  color: rgba(255,255,255,0.7);
+}
+
+/* ============================================================
+   OPPONENT HAND (mini display)
+   ============================================================ */
+#opponent-hand-mini {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+.opponent-mini-card {
+  width: 30px;
+  height: 40px;
+  border-radius: 3px;
+  background: var(--surface);
+  border: 1px solid rgba(255,77,77,0.3);
+  position: relative;
+}
+.opponent-mini-card.used { opacity: 0.2; }
+.opponent-mini-card .mini-card-back {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  color: rgba(255,255,255,0.3);
+  border-radius: 2px;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+button {
+  padding: 8px 22px;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+  color: #fff;
+}
+#btn-new-game {
+  background: linear-gradient(135deg, #2a2a4a, #3a3a6a);
+}
+#btn-new-game:hover {
+  background: linear-gradient(135deg, #3a3a6a, #4a4a8a);
+  border-color: rgba(255,255,255,0.4);
+}
+
+/* ============================================================
+   OVERLAY
+   ============================================================ */
+#overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+#overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+#overlay-box {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 32px 40px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  transform: scale(0.8);
+  transition: transform 0.4s;
+}
+#overlay.active #overlay-box { transform: scale(1); }
+
+#overlay-box .result-icon {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
+#overlay-box .result-text {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+#overlay-box .result-detail {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+}
+#overlay-btn {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #000;
+  border: none;
+  font-weight: 700;
+  padding: 10px 30px;
+}
+#overlay-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+/* ============================================================
+   TURN INDICATOR
+   ============================================================ */
+#turn-indicator {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: color 0.3s;
+}
+#turn-indicator.player-turn { color: var(--player-color); }
+#turn-indicator.opponent-turn { color: var(--opponent-color); }
+
+/* ============================================================
+   TOOLTIP
+   ============================================================ */
+.cell[data-tooltip]:hover::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 380px) {
+  :root { --card-width: 78px; --card-height: 102px; }
+  #board { gap: 4px; padding: 5px; }
+  .card-board { grid-template-columns: 20px 1fr 20px; grid-template-rows: 18px 1fr 18px; }
+  .card-board .stat { font-size: 0.7rem; }
+  .card-board .card-name { font-size: 0.45rem; }
+  .hand-card { width: 62px; height: 84px; grid-template-columns: 17px 1fr 17px; grid-template-rows: 15px 1fr 15px; }
+  .hand-card .stat { font-size: 0.6rem; }
+  .hand-card .card-name { font-size: 0.42rem; }
+  #player-hand { gap: 5px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Header -->
+  <div id="header">
+    <h1>Triple Triad</h1>
+    <div class="subtitle">Final Fantasy VIII</div>
+  </div>
+
+  <!-- Rules -->
+  <div id="rules-bar">
+    <label id="lbl-same"><span class="rule-dot"></span> Same</label>
+    <label id="lbl-plus"><span class="rule-dot"></span> Plus</label>
+    <label id="lbl-samewall"><span class="rule-dot"></span> Wall</label>
+    <label id="lbl-combo"><span class="rule-dot"></span> Combo</label>
+    <span class="sep"></span>
+    <label id="lbl-open"><span class="rule-dot"></span> Open</label>
+    <span class="sep"></span>
+    <select id="difficulty-select">
+      <option value="easy">Easy</option>
+      <option value="normal" selected>Normal</option>
+      <option value="hard">Hard</option>
+    </select>
+    <span class="sep"></span>
+    <button id="btn-new-game">New Game</button>
+  </div>
+
+  <!-- Opponent Info -->
+  <div id="opponent-score" class="score-area">
+    <span class="label">Opponent</span>
+    <span class="score">0</span>
+  </div>
+
+  <!-- Opponent Mini Hand -->
+  <div id="opponent-hand-mini"></div>
+
+  <!-- Turn Indicator -->
+  <div id="turn-indicator" class="player-turn">Your Turn</div>
+
+  <!-- Board -->
+  <div id="board-container">
+    <div id="board"></div>
+  </div>
+
+  <!-- Player Info -->
+  <div id="player-score" class="score-area">
+    <span class="label">You</span>
+    <span class="score">0</span>
+  </div>
+
+  <!-- Player Hand -->
+  <div id="hand-area">
+    <div id="player-hand"></div>
+  </div>
+</div>
+
+<!-- Game Over Overlay -->
+<div id="overlay">
+  <div id="overlay-box">
+    <div class="result-icon"></div>
+    <div class="result-text"></div>
+    <div class="result-detail"></div>
+    <button id="overlay-btn">Play Again</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   TRIPLE TRIAD - FINAL FANTASY VIII
+   Complete web-based card game
+   ============================================================ */
+
+// ============================================================
+// CARD DATABASE — All 110 FF8 Triple Triad Cards
+// Stats: top, right, bottom, left (A = 10)
+// ============================================================
+const CARD_DB = [
+  // Level 1 — Monster Cards (11)
+  { id:1,  name:'Geezard',        lv:1, t:1, r:5, b:4, l:1, elem:null },
+  { id:2,  name:'Funguar',        lv:1, t:5, r:3, b:1, l:1, elem:null },
+  { id:3,  name:'Bite Bug',       lv:1, t:1, r:5, b:3, l:3, elem:null },
+  { id:4,  name:'Red Bat',        lv:1, t:6, r:2, b:1, l:1, elem:null },
+  { id:5,  name:'Blobra',         lv:1, t:2, r:5, b:3, l:1, elem:null },
+  { id:6,  name:'Gayla',          lv:1, t:2, r:4, b:1, l:4, elem:'lightning' },
+  { id:7,  name:'Gesper',         lv:1, t:1, r:1, b:5, l:4, elem:null },
+  { id:8,  name:'Fastitocalon-F', lv:1, t:3, r:1, b:5, l:2, elem:'earth' },
+  { id:9,  name:'Blood Soul',     lv:1, t:2, r:1, b:1, l:6, elem:null },
+  { id:10, name:'Caterchipillar', lv:1, t:4, r:3, b:2, l:4, elem:null },
+  { id:11, name:'Cockatrice',     lv:1, t:2, r:6, b:1, l:2, elem:'lightning' },
+
+  // Level 2 — Monster Cards (11)
+  { id:12, name:'Grat',           lv:2, t:7, r:1, b:1, l:3, elem:null },
+  { id:13, name:'Buel',           lv:2, t:6, r:3, b:2, l:2, elem:null },
+  { id:14, name:'Mesmerize',      lv:2, t:5, r:4, b:3, l:3, elem:null },
+  { id:15, name:'Glacial Eye',    lv:2, t:6, r:3, b:1, l:4, elem:'ice' },
+  { id:16, name:'Belhelmel',      lv:2, t:3, r:3, b:4, l:5, elem:null },
+  { id:17, name:'Thrustaevis',    lv:2, t:5, r:5, b:3, l:2, elem:'wind' },
+  { id:18, name:'Anacondaur',     lv:2, t:5, r:5, b:1, l:3, elem:'poison' },
+  { id:19, name:'Creeps',         lv:2, t:5, r:2, b:2, l:5, elem:'lightning' },
+  { id:20, name:'Grendel',        lv:2, t:4, r:2, b:4, l:5, elem:'lightning' },
+  { id:21, name:'Jelleye',        lv:2, t:3, r:7, b:2, l:1, elem:null },
+  { id:22, name:'Grand Mantis',   lv:2, t:5, r:3, b:2, l:5, elem:null },
+
+  // Level 3 — Monster Cards (11)
+  { id:23, name:'Forbidden',      lv:3, t:6, r:2, b:6, l:3, elem:null },
+  { id:24, name:'Armadodo',       lv:3, t:6, r:6, b:3, l:1, elem:'earth' },
+  { id:25, name:'Tri-Face',       lv:3, t:3, r:5, b:5, l:5, elem:'poison' },
+  { id:26, name:'Fastitocalon',   lv:3, t:7, r:2, b:5, l:1, elem:'earth' },
+  { id:27, name:'Snow Lion',      lv:3, t:7, r:3, b:1, l:5, elem:'ice' },
+  { id:28, name:'Ochu',           lv:3, t:5, r:3, b:6, l:3, elem:null },
+  { id:29, name:'SAM08G',         lv:3, t:5, r:4, b:6, l:2, elem:'fire' },
+  { id:30, name:'Death Claw',     lv:3, t:4, r:2, b:4, l:7, elem:'fire' },
+  { id:31, name:'Cactuar',        lv:3, t:6, r:3, b:2, l:6, elem:null },
+  { id:32, name:'Tonberry',       lv:3, t:3, r:4, b:6, l:6, elem:null },
+  { id:33, name:'Abyss Worm',     lv:3, t:7, r:5, b:2, l:3, elem:'earth' },
+
+  // Level 4 — Monster Cards (11)
+  { id:34, name:'Turtapod',       lv:4, t:2, r:7, b:3, l:6, elem:null },
+  { id:35, name:'Vysage',         lv:4, t:6, r:5, b:5, l:4, elem:null },
+  { id:36, name:'T-Rexaur',       lv:4, t:4, r:7, b:6, l:2, elem:null },
+  { id:37, name:'Bomb',           lv:4, t:2, r:3, b:7, l:6, elem:'fire' },
+  { id:38, name:'Blitz',          lv:4, t:1, r:7, b:6, l:4, elem:'lightning' },
+  { id:39, name:'Wendigo',        lv:4, t:7, r:6, b:3, l:1, elem:null },
+  { id:40, name:'Torama',         lv:4, t:7, r:4, b:4, l:4, elem:null },
+  { id:41, name:'Imp',            lv:4, t:3, r:6, b:7, l:3, elem:null },
+  { id:42, name:'Blue Dragon',    lv:4, t:6, r:3, b:2, l:7, elem:'poison' },
+  { id:43, name:'Adamantoise',    lv:4, t:4, r:6, b:5, l:5, elem:'earth' },
+  { id:44, name:'Hexadragon',     lv:4, t:7, r:3, b:4, l:5, elem:'fire' },
+
+  // Level 5 — Monster Cards (11)
+  { id:45, name:'Iron Giant',     lv:5, t:6, r:5, b:5, l:6, elem:null },
+  { id:46, name:'Behemoth',       lv:5, t:3, r:7, b:6, l:5, elem:null },
+  { id:47, name:'Chimera',        lv:5, t:7, r:3, b:6, l:5, elem:'water' },
+  { id:48, name:'PuPu',           lv:5, t:3, r:1, b:10,l:2, elem:null },
+  { id:49, name:'Elastoid',       lv:5, t:6, r:7, b:2, l:6, elem:null },
+  { id:50, name:'GIM47N',         lv:5, t:5, r:4, b:5, l:7, elem:null },
+  { id:51, name:'Malboro',        lv:5, t:7, r:2, b:7, l:4, elem:'poison' },
+  { id:52, name:'Ruby Dragon',    lv:5, t:7, r:4, b:2, l:7, elem:'fire' },
+  { id:53, name:'Elnoyle',        lv:5, t:5, r:6, b:3, l:7, elem:null },
+  { id:54, name:'Tonberry King',  lv:5, t:4, r:4, b:6, l:7, elem:null },
+  { id:55, name:'Wedge, Biggs',   lv:5, t:6, r:7, b:6, l:2, elem:null },
+
+  // Level 6 — Boss Cards (11)
+  { id:56, name:'Fujin, Raijin',  lv:6, t:2, r:4, b:8, l:8, elem:null },
+  { id:57, name:'Elvoret',        lv:6, t:7, r:4, b:8, l:3, elem:'wind' },
+  { id:58, name:'X-ATM092',       lv:6, t:4, r:3, b:8, l:7, elem:null },
+  { id:59, name:'Granaldo',       lv:6, t:7, r:5, b:2, l:8, elem:null },
+  { id:60, name:'Gerogero',       lv:6, t:1, r:3, b:8, l:8, elem:'poison' },
+  { id:61, name:'Iguion',         lv:6, t:8, r:2, b:2, l:8, elem:null },
+  { id:62, name:'Abadon',         lv:6, t:6, r:5, b:8, l:4, elem:null },
+  { id:63, name:'Trauma',         lv:6, t:4, r:6, b:8, l:5, elem:null },
+  { id:64, name:'Oilboyle',       lv:6, t:1, r:8, b:8, l:4, elem:null },
+  { id:65, name:'Shumi Tribe',    lv:6, t:6, r:4, b:5, l:8, elem:null },
+  { id:66, name:'Krysta',         lv:6, t:7, r:1, b:5, l:8, elem:null },
+
+  // Level 7 — Boss Cards (11)
+  { id:67, name:'Propagator',     lv:7, t:8, r:8, b:4, l:4, elem:null },
+  { id:68, name:'Jumbo Cactuar',  lv:7, t:8, r:4, b:8, l:4, elem:null },
+  { id:69, name:'Tri-Point',      lv:7, t:8, r:8, b:5, l:2, elem:'lightning' },
+  { id:70, name:'Gargantua',      lv:7, t:5, r:8, b:6, l:6, elem:null },
+  { id:71, name:'Mobile Type 8',  lv:7, t:8, r:3, b:6, l:7, elem:null },
+  { id:72, name:'Sphinxara',      lv:7, t:8, r:8, b:3, l:5, elem:null },
+  { id:73, name:'Tiamat',         lv:7, t:8, r:4, b:8, l:5, elem:null },
+  { id:74, name:'BGH251F2',       lv:7, t:5, r:5, b:7, l:8, elem:null },
+  { id:75, name:'Red Giant',      lv:7, t:6, r:7, b:8, l:4, elem:null },
+  { id:76, name:'Catoblepas',     lv:7, t:1, r:7, b:8, l:7, elem:null },
+  { id:77, name:'Ultima Weapon',  lv:7, t:7, r:8, b:7, l:2, elem:null },
+
+  // Level 8 — GF Cards (11, rare)
+  { id:78, name:'Chubby Chocobo', lv:8, t:4, r:9, b:4, l:8, elem:null },
+  { id:79, name:'Angelo',         lv:8, t:9, r:3, b:6, l:7, elem:null },
+  { id:80, name:'Gilgamesh',      lv:8, t:3, r:6, b:7, l:9, elem:null },
+  { id:81, name:'MiniMog',        lv:8, t:9, r:2, b:3, l:9, elem:null },
+  { id:82, name:'Chicobo',        lv:8, t:9, r:4, b:4, l:8, elem:null },
+  { id:83, name:'Quezacotl',      lv:8, t:2, r:4, b:9, l:9, elem:'lightning' },
+  { id:84, name:'Shiva',          lv:8, t:6, r:9, b:7, l:4, elem:'ice' },
+  { id:85, name:'Ifrit',          lv:8, t:9, r:8, b:6, l:2, elem:'fire' },
+  { id:86, name:'Siren',          lv:8, t:8, r:2, b:9, l:6, elem:null },
+  { id:87, name:'Sacred',         lv:8, t:5, r:9, b:1, l:9, elem:'earth' },
+  { id:88, name:'Minotaur',       lv:8, t:9, r:9, b:5, l:2, elem:'earth' },
+
+  // Level 9 — GF Cards (11, rare)
+  { id:89, name:'Carbuncle',      lv:9, t:8, r:4, b:4, l:10, elem:null },
+  { id:90, name:'Diablos',        lv:9, t:5, r:3, b:10, l:8, elem:null },
+  { id:91, name:'Leviathan',      lv:9, t:7, r:7, b:10, l:1, elem:'water' },
+  { id:92, name:'Odin',           lv:9, t:8, r:5, b:10, l:3, elem:null },
+  { id:93, name:'Pandemona',      lv:9, t:10, r:7, b:1, l:7, elem:'wind' },
+  { id:94, name:'Cerberus',       lv:9, t:7, r:10, b:4, l:6, elem:null },
+  { id:95, name:'Alexander',      lv:9, t:9, r:2, b:10, l:4, elem:'holy' },
+  { id:96, name:'Phoenix',        lv:9, t:7, r:10, b:2, l:7, elem:'fire' },
+  { id:97, name:'Bahamut',        lv:9, t:10, r:6, b:8, l:2, elem:null },
+  { id:98, name:'Doomtrain',      lv:9, t:3, r:10, b:1, l:10, elem:'poison' },
+  { id:99, name:'Eden',           lv:9, t:4, r:10, b:4, l:9, elem:null },
+
+  // Level 10 — Player Cards (11, rare)
+  { id:100, name:'Ward',          lv:10, t:10, r:8,  b:7,  l:2,  elem:null },
+  { id:101, name:'Kiros',         lv:10, t:6,  r:10, b:7,  l:6,  elem:null },
+  { id:102, name:'Laguna',        lv:10, t:5,  r:9,  b:10, l:3,  elem:null },
+  { id:103, name:'Selphie',       lv:10, t:10, r:4,  b:8,  l:6,  elem:null },
+  { id:104, name:'Quistis',       lv:10, t:9,  r:2,  b:6,  l:10, elem:null },
+  { id:105, name:'Irvine',        lv:10, t:2,  r:10, b:6,  l:9,  elem:null },
+  { id:106, name:'Zell',          lv:10, t:8,  r:6,  b:5,  l:10, elem:null },
+  { id:107, name:'Rinoa',         lv:10, t:4,  r:10, b:10, l:2,  elem:null },
+  { id:108, name:'Edea',          lv:10, t:10, r:3,  b:10, l:3,  elem:null },
+  { id:109, name:'Seifer',        lv:10, t:6,  r:4,  b:9,  l:10, elem:null },
+  { id:110, name:'Squall',        lv:10, t:10, r:9,  b:4,  l:6,  elem:null },
+];
+
+const ELEMENT_ICONS = {
+  fire: '🔥', ice: '❄️', lightning: '⚡', earth: '🪨',
+  water: '💧', wind: '🌀', poison: '☠️', holy: '✨'
+};
+
+// ============================================================
+// GAME STATE
+// ============================================================
+const Game = {
+  board: new Array(9).fill(null),  // { card, owner }
+  playerHand: [],
+  opponentHand: [],
+  currentTurn: 'player',
+  scores: { player: 0, opponent: 0 },
+  rules: { same: true, plus: true, sameWall: true, combo: true, open: true },
+  difficulty: 'normal',
+  gameOver: false,
+  winner: null,
+  selectedCardIdx: null,
+  playerUsed: new Array(5).fill(false),
+  opponentUsed: new Array(5).fill(false),
+  elementalBoard: new Array(9).fill(null),
+  processingAI: false,
+};
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+
+/** Fisher-Yates shuffle */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** Display stat: 10 → 'A' */
+function statDisp(val) { return val === 10 ? 'A' : String(val); }
+
+/** Get card level CSS class */
+function cardLevelClass(lv) {
+  if (lv <= 3) return 'card-lv1-3';
+  if (lv <= 5) return 'card-lv4-5';
+  if (lv <= 7) return 'card-lv6-7';
+  if (lv <= 9) return 'card-lv8-9';
+  return 'card-lv10';
+}
+
+/** Get the stat of a card on a given side */
+function cardSide(card, side) {
+  switch (side) {
+    case 'top': return card.t;
+    case 'right': return card.r;
+    case 'bottom': return card.b;
+    case 'left': return card.l;
+  }
+}
+
+/** Opposite side */
+function oppositeSide(side) {
+  switch (side) {
+    case 'top': return 'bottom';
+    case 'bottom': return 'top';
+    case 'left': return 'right';
+    case 'right': return 'left';
+  }
+}
+
+/** Get adjacent cell info for a board index and direction */
+function getAdjacent(idx, dir) {
+  switch (dir) {
+    case 'top':    return idx >= 3      ? { cellIdx: idx - 3, mySide: 'top',    theirSide: 'bottom' } : null;
+    case 'bottom': return idx <= 5      ? { cellIdx: idx + 3, mySide: 'bottom', theirSide: 'top' }    : null;
+    case 'left':   return idx % 3 !== 0 ? { cellIdx: idx - 1, mySide: 'left',   theirSide: 'right' }  : null;
+    case 'right':  return idx % 3 !== 2 ? { cellIdx: idx + 1, mySide: 'right',  theirSide: 'left' }   : null;
+  }
+}
+
+/** Get all adjacent opponent cells for a board index */
+function getAdjacentOpponents(idx, placer) {
+  const adj = [];
+  for (const dir of ['top', 'bottom', 'left', 'right']) {
+    const info = getAdjacent(idx, dir);
+    if (info && Game.board[info.cellIdx] && Game.board[info.cellIdx].owner !== placer) {
+      adj.push({ ...info, cell: Game.board[info.cellIdx] });
+    }
+  }
+  return adj;
+}
+
+/** Get wall values for a cell (for Same Wall rule) */
+function getWallValues(idx) {
+  const walls = [];
+  if (idx < 3) walls.push({ side: 'top', value: 10 });
+  if (idx > 5) walls.push({ side: 'bottom', value: 10 });
+  if (idx % 3 === 0) walls.push({ side: 'left', value: 10 });
+  if (idx % 3 === 2) walls.push({ side: 'right', value: 10 });
+  return walls;
+}
+
+/** Check if cell index is on a corner */
+function isCorner(idx) { return (idx === 0 || idx === 2 || idx === 6 || idx === 8); }
+
+/** Check if cell index is on an edge */
+function isEdge(idx) { return (idx < 3 || idx > 5 || idx % 3 === 0 || idx % 3 === 2); }
+
+/** Total stat sum of a card */
+function cardTotal(card) { return card.t + card.r + card.b + card.l; }
+
+// ============================================================
+// CORE GAME LOGIC
+// ============================================================
+
+/**
+ * Place a card and resolve all flips.
+ * Returns { flipped: Set<cellIdx>, placedAt: idx, card, placer }
+ */
+function placeCard(handIdx, boardIdx, placer) {
+  const hand = placer === 'player' ? Game.playerHand : Game.opponentHand;
+  const used = placer === 'player' ? Game.playerUsed : Game.opponentUsed;
+  const card = hand[handIdx];
+
+  // Place the card
+  Game.board[boardIdx] = { card, owner: placer };
+  used[handIdx] = true;
+
+  // Mark selected card as used
+  if (placer === 'player') {
+    Game.selectedCardIdx = null;
+  }
+
+  const opponent = placer === 'player' ? 'opponent' : 'player';
+  const flipped = new Set();
+
+  // 1. Check Plus (takes priority over Same in FF8)
+  let plusTriggered = false;
+  if (Game.rules.plus) {
+    const plusResult = checkPlus(boardIdx, card, placer, opponent);
+    if (plusResult.flipped.length >= 2) {
+      plusResult.flipped.forEach(idx => {
+        Game.board[idx].owner = placer;
+        flipped.add(idx);
+      });
+      plusTriggered = true;
+    }
+  }
+
+  // 2. Check Same (only if Plus didn't trigger)
+  if (!plusTriggered && Game.rules.same) {
+    const sameResult = checkSame(boardIdx, card, placer, opponent);
+    if (sameResult.flipped.length >= 2) {
+      sameResult.flipped.forEach(idx => {
+        Game.board[idx].owner = placer;
+        flipped.add(idx);
+      });
+    } else {
+      // 3. Basic flip for any unmatched cards
+      const basicFlips = checkBasicFlips(boardIdx, card, placer, opponent);
+      basicFlips.forEach(idx => {
+        if (!flipped.has(idx)) {
+          Game.board[idx].owner = placer;
+          flipped.add(idx);
+        }
+      });
+    }
+  } else if (!plusTriggered) {
+    // Basic flip only
+    const basicFlips = checkBasicFlips(boardIdx, card, placer, opponent);
+    basicFlips.forEach(idx => {
+      if (!flipped.has(idx)) {
+        Game.board[idx].owner = placer;
+        flipped.add(idx);
+      }
+    });
+  }
+
+  // 4. Combo chain
+  if (Game.rules.combo && flipped.size > 0) {
+    comboChain(flipped, placer);
+  }
+
+  // 5. Update scores
+  updateScores();
+
+  return { flipped, placedAt: boardIdx, card, placer };
+}
+
+/**
+ * Check basic flips: my number > their touching number
+ */
+function checkBasicFlips(boardIdx, placedCard, placer, opponent) {
+  const flipped = [];
+  for (const dir of ['top', 'bottom', 'left', 'right']) {
+    const adj = getAdjacent(boardIdx, dir);
+    if (!adj) continue;
+    const cell = Game.board[adj.cellIdx];
+    if (!cell || cell.owner !== opponent) continue;
+    if (cardSide(placedCard, adj.mySide) > cardSide(cell.card, adj.theirSide)) {
+      flipped.push(adj.cellIdx);
+    }
+  }
+  return flipped;
+}
+
+/**
+ * Check Same rule: my touching number == their touching number
+ * Must match 2+ cards to trigger.
+ */
+function checkSame(boardIdx, placedCard, placer, opponent) {
+  const adjOpponents = getAdjacentOpponents(boardIdx, placer);
+  const matched = [];
+
+  for (const adj of adjOpponents) {
+    const myVal = cardSide(placedCard, adj.mySide);
+    const theirVal = cardSide(adj.cell.card, adj.theirSide);
+    if (myVal === theirVal) {
+      matched.push(adj.cellIdx);
+    }
+  }
+
+  // Same Wall: also check wall edges
+  if (Game.rules.sameWall) {
+    const walls = getWallValues(boardIdx);
+    for (const w of walls) {
+      const myVal = cardSide(placedCard, w.side);
+      if (myVal === w.value) {
+        // Walls match — this counts as a match for triggering Same
+        // In FF8, Same Wall makes it easier to trigger Same by counting walls as A
+        // For simplicity: if any wall matches, we count it toward the "2+ matches" requirement
+        // But walls don't flip cards; they just help trigger the rule
+        matched.push(-1); // sentinel for wall match
+      }
+    }
+  }
+
+  // Filter out wall sentinels to get actual flippable cells
+  const actualFlips = matched.filter(idx => idx >= 0);
+
+  // Need 2+ matches total (including walls) to trigger Same
+  if (matched.length >= 2) {
+    return { flipped: actualFlips };
+  }
+  return { flipped: [] };
+}
+
+/**
+ * Check Plus rule: if sum of touching numbers equals sum of another pair
+ */
+function checkPlus(boardIdx, placedCard, placer, opponent) {
+  const adjOpponents = getAdjacentOpponents(boardIdx, placer);
+  if (adjOpponents.length < 2) return { flipped: [] };
+
+  // Compute sums for each adjacent opponent card
+  const sums = adjOpponents.map(adj => ({
+    cellIdx: adj.cellIdx,
+    sum: cardSide(placedCard, adj.mySide) + cardSide(adj.cell.card, adj.theirSide),
+  }));
+
+  // Find sums that appear more than once
+  const sumCounts = {};
+  sums.forEach(s => {
+    if (!sumCounts[s.sum]) sumCounts[s.sum] = [];
+    sumCounts[s.sum].push(s.cellIdx);
+  });
+
+  // Flip all cards belonging to any sum with 2+ matches
+  const flipped = [];
+  for (const [sum, cells] of Object.entries(sumCounts)) {
+    if (cells.length >= 2) {
+      flipped.push(...cells);
+    }
+  }
+
+  return { flipped };
+}
+
+/**
+ * Combo chain: newly flipped cards check adjacent opponent cards for basic flips.
+ * Repeat until no new flips.
+ */
+function comboChain(initialFlipped, placer) {
+  const opponent = placer === 'player' ? 'opponent' : 'player';
+  const processed = new Set(initialFlipped);
+  let queue = [...initialFlipped];
+
+  while (queue.length > 0) {
+    const currentIdx = queue.shift();
+    const cell = Game.board[currentIdx];
+    if (!cell) continue;
+
+    for (const dir of ['top', 'bottom', 'left', 'right']) {
+      const adj = getAdjacent(currentIdx, dir);
+      if (!adj) continue;
+      if (processed.has(adj.cellIdx)) continue;
+
+      const adjCell = Game.board[adj.cellIdx];
+      if (!adjCell || adjCell.owner !== opponent) continue;
+
+      // Check if current card can flip this adjacent opponent card (basic flip)
+      if (cardSide(cell.card, adj.mySide) > cardSide(adjCell.card, adj.theirSide)) {
+        Game.board[adj.cellIdx].owner = placer;
+        processed.add(adj.cellIdx);
+        queue.push(adj.cellIdx);
+      }
+    }
+  }
+}
+
+/** Count scores from board */
+function updateScores() {
+  let p = 0, o = 0;
+  for (const cell of Game.board) {
+    if (!cell) continue;
+    if (cell.owner === 'player') p++;
+    else o++;
+  }
+  Game.scores.player = p;
+  Game.scores.opponent = o;
+}
+
+/** Check if game is over (board full, or no moves left — simplified) */
+function isBoardFull() {
+  return Game.board.every(cell => cell !== null);
+}
+
+function checkGameEnd() {
+  if (isBoardFull()) {
+    Game.gameOver = true;
+    if (Game.scores.player > Game.scores.opponent) Game.winner = 'player';
+    else if (Game.scores.opponent > Game.scores.player) Game.winner = 'opponent';
+    else Game.winner = 'draw';
+    return true;
+  }
+  return false;
+}
+
+/** Check if a specific board index is a valid placement for the player */
+function isValidMove(boardIdx) {
+  return Game.board[boardIdx] === null && Game.selectedCardIdx !== null;
+}
+
+// ============================================================
+// AI OPPONENT
+// ============================================================
+
+function getAIMoves() {
+  const moves = [];
+  for (let c = 0; c < 5; c++) {
+    if (Game.opponentUsed[c]) continue;
+    for (let i = 0; i < 9; i++) {
+      if (Game.board[i] !== null) continue;
+      moves.push({ handIdx: c, boardIdx: i });
+    }
+  }
+  return moves;
+}
+
+function simulatePlace(handIdx, boardIdx, boardSnapshot, opponentHand) {
+  // Deep clone the board for simulation
+  const simBoard = boardSnapshot.map(cell => cell ? { ...cell } : null);
+  const card = opponentHand[handIdx];
+  simBoard[boardIdx] = { card, owner: 'opponent' };
+
+  // Check basic flips
+  const flipped = [];
+  for (const dir of ['top', 'bottom', 'left', 'right']) {
+    const adj = getAdjacent(boardIdx, dir);
+    if (!adj) continue;
+    const cell = simBoard[adj.cellIdx];
+    if (!cell || cell.owner !== 'player') continue;
+    if (cardSide(card, adj.mySide) > cardSide(cell.card, adj.theirSide)) {
+      flipped.push(adj.cellIdx);
+    }
+  }
+
+  // Apply flips
+  flipped.forEach(idx => { simBoard[idx].owner = 'opponent'; });
+
+  return { board: simBoard, flipped: flipped.length };
+}
+
+function evaluateBoard(board) {
+  // Positive = good for opponent (AI), negative = good for player
+  let score = 0;
+  for (const cell of board) {
+    if (!cell) continue;
+    const val = cell.owner === 'opponent' ? 1 : -1;
+    // Bonus for high-level cards
+    const lvBonus = cell.card.lv >= 8 ? 0.5 : cell.card.lv >= 6 ? 0.25 : 0;
+    score += val * (1 + lvBonus);
+  }
+  return score;
+}
+
+/** AI Easy: random valid move */
+function aiEasy() {
+  const moves = getAIMoves();
+  if (moves.length === 0) return null;
+  return moves[Math.floor(Math.random() * moves.length)];
+}
+
+/** AI Normal: greedy evaluation */
+function aiNormal() {
+  const moves = getAIMoves();
+  if (moves.length === 0) return null;
+  if (moves.length === 1) return moves[0];
+
+  const scored = moves.map(m => {
+    const card = Game.opponentHand[m.handIdx];
+    const result = simulatePlace(m.handIdx, m.boardIdx, Game.board, Game.opponentHand);
+    let score = result.flipped * 1.5;
+
+    // Bonus for using weaker cards first (save strong ones)
+    score -= cardTotal(card) * 0.05;
+
+    // Bonus for corner/edge placement (harder to flip back)
+    if (isCorner(m.boardIdx)) score += 0.8;
+    else if (isEdge(m.boardIdx)) score += 0.3;
+
+    // Bonus for placing near center (more opportunities)
+    if (m.boardIdx === 4) score += 0.5;
+
+    // Penalty for exposing weak sides
+    for (const dir of ['top', 'bottom', 'left', 'right']) {
+      const adj = getAdjacent(m.boardIdx, dir);
+      if (!adj || !Game.board[adj.cellIdx]) {
+        // Empty adjacent cell — this side could be attacked
+        // Check if this side is weak
+        if (cardSide(card, dir) <= 4) score -= 0.3;
+      }
+    }
+
+    return { ...m, score };
+  });
+
+  // Sort by score descending
+  scored.sort((a, b) => b.score - a.score);
+  // Pick among top-scoring moves (random for variety)
+  const topScore = scored[0].score;
+  const topMoves = scored.filter(m => m.score >= topScore - 0.01);
+  return topMoves[Math.floor(Math.random() * topMoves.length)];
+}
+
+/** AI Hard: minimax with alpha-beta pruning, depth 2 */
+function aiHard() {
+  const moves = getAIMoves();
+  if (moves.length === 0) return null;
+  if (moves.length === 1) return moves[0];
+
+  let bestScore = -Infinity;
+  let bestMoves = [];
+
+  for (const m of moves) {
+    const simBoard = simulatePlace(m.handIdx, m.boardIdx, Game.board, Game.opponentHand).board;
+    const score = minimax(simBoard, 1, -Infinity, Infinity, false);
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [m];
+    } else if (Math.abs(score - bestScore) < 0.001) {
+      bestMoves.push(m);
+    }
+  }
+
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+}
+
+function minimax(board, depth, alpha, beta, isOpponent) {
+  // Terminal: depth 0 or board full
+  if (depth === 0 || board.every(c => c !== null)) {
+    return evaluateBoard(board);
+  }
+
+  const currentPlayer = isOpponent ? 'opponent' : 'player';
+  const opponent = isOpponent ? 'player' : 'opponent';
+
+  // Get available moves
+  // For simplicity: get unplaced positions and use a generic card set
+  const emptyCells = [];
+  board.forEach((cell, idx) => { if (!cell) emptyCells.push(idx); });
+
+  if (emptyCells.length === 0) return evaluateBoard(board);
+
+  // Simplified: use average card values for lookahead
+  const avgCard = { t: 5, r: 5, b: 5, l: 5, lv: 5 };
+
+  if (isOpponent) {
+    let maxEval = -Infinity;
+    for (const cellIdx of emptyCells) {
+      const simB = board.map(c => c ? { ...c } : null);
+      simB[cellIdx] = { card: avgCard, owner: 'opponent' };
+      // Simulate basic flips
+      for (const dir of ['top', 'bottom', 'left', 'right']) {
+        const adj = getAdjacent(cellIdx, dir);
+        if (!adj) continue;
+        const adjCell = simB[adj.cellIdx];
+        if (!adjCell || adjCell.owner !== 'player') continue;
+        if (cardSide(avgCard, adj.mySide) > cardSide(adjCell.card, adj.theirSide)) {
+          adjCell.owner = 'opponent';
+        }
+      }
+      const evalScore = minimax(simB, depth - 1, alpha, beta, false);
+      maxEval = Math.max(maxEval, evalScore);
+      alpha = Math.max(alpha, evalScore);
+      if (beta <= alpha) break;
+    }
+    return maxEval;
+  } else {
+    let minEval = Infinity;
+    for (const cellIdx of emptyCells) {
+      const simB = board.map(c => c ? { ...c } : null);
+      simB[cellIdx] = { card: avgCard, owner: 'player' };
+      for (const dir of ['top', 'bottom', 'left', 'right']) {
+        const adj = getAdjacent(cellIdx, dir);
+        if (!adj) continue;
+        const adjCell = simB[adj.cellIdx];
+        if (!adjCell || adjCell.owner !== 'opponent') continue;
+        if (cardSide(avgCard, adj.mySide) > cardSide(adjCell.card, adj.theirSide)) {
+          adjCell.owner = 'player';
+        }
+      }
+      const evalScore = minimax(simB, depth - 1, alpha, beta, true);
+      minEval = Math.min(minEval, evalScore);
+      beta = Math.min(beta, evalScore);
+      if (beta <= alpha) break;
+    }
+    return minEval;
+  }
+}
+
+/** Execute AI move */
+function doAIMove() {
+  if (Game.gameOver) return;
+
+  let move;
+  switch (Game.difficulty) {
+    case 'easy': move = aiEasy(); break;
+    case 'normal': move = aiNormal(); break;
+    case 'hard': move = aiHard(); break;
+    default: move = aiNormal();
+  }
+
+  if (!move) { checkGameEnd(); renderAll(); return; }
+
+  const result = placeCard(move.handIdx, move.boardIdx, 'opponent');
+
+  // Animate
+  renderAll();
+  animatePlacement(move.boardIdx);
+  result.flipped.forEach(idx => animateFlip(idx, 'opponent'));
+
+  if (!checkGameEnd()) {
+    Game.currentTurn = 'player';
+    updateTurnIndicator();
+  }
+
+  Game.processingAI = false;
+  renderAll();
+}
+
+/** Initiate AI turn after a delay */
+function scheduleAIMove() {
+  if (Game.gameOver) return;
+  Game.processingAI = true;
+  renderAll();
+  const delay = 400 + Math.random() * 600;
+  setTimeout(doAIMove, delay);
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+/** Render a card element (for board cells) */
+function createCardHTML(card, owner) {
+  const lvClass = cardLevelClass(card.lv);
+  const elementIcon = card.elem ? ELEMENT_ICONS[card.elem] || '' : '';
+  return `
+    <div class="card-board ${lvClass}">
+      <div class="stat stat-top">${statDisp(card.t)}</div>
+      <div class="stat stat-bottom">${statDisp(card.b)}</div>
+      <div class="stat stat-left">${statDisp(card.l)}</div>
+      <div class="stat stat-right">${statDisp(card.r)}</div>
+      <div class="card-body">
+        ${elementIcon ? `<span class="card-element">${elementIcon}</span>` : ''}
+        <span class="card-name">${card.name}</span>
+        <span class="card-level">Lv${card.lv}</span>
+      </div>
+    </div>
+  `;
+}
+
+/** Render the 3x3 board */
+function renderBoard() {
+  const boardEl = document.getElementById('board');
+  let html = '';
+  for (let i = 0; i < 9; i++) {
+    const cell = Game.board[i];
+    let cellClass = 'cell';
+    let tooltip = '';
+    let elemAttr = '';
+
+    if (cell) {
+      cellClass += ' occupied ' + cell.owner;
+      tooltip = cell.card.name;
+    } else if (isValidMove(i)) {
+      cellClass += ' valid';
+    }
+
+    if (Game.elementalBoard[i]) {
+      elemAttr = ` data-element="${Game.elementalBoard[i]}"`;
+    }
+
+    html += `<div class="${cellClass}" data-index="${i}"${tooltip ? ` data-tooltip="${tooltip}"` : ''}${elemAttr}>`;
+    if (cell) {
+      html += createCardHTML(cell.card, cell.owner);
+    }
+    html += '</div>';
+  }
+  boardEl.innerHTML = html;
+
+  // Attach click handlers to cells
+  boardEl.querySelectorAll('.cell').forEach(el => {
+    el.addEventListener('click', () => onCellClick(parseInt(el.dataset.index)));
+  });
+}
+
+/** Render player hand */
+function renderHand() {
+  const handEl = document.getElementById('player-hand');
+  let html = '';
+  for (let i = 0; i < 5; i++) {
+    const card = Game.playerHand[i];
+    const used = Game.playerUsed[i];
+    const selected = Game.selectedCardIdx === i;
+    const lvClass = cardLevelClass(card.lv);
+    const elementIcon = card.elem ? ELEMENT_ICONS[card.elem] || '' : '';
+
+    let classes = 'hand-card ' + lvClass;
+    if (used) classes += ' used';
+    if (selected) classes += ' selected';
+
+    html += `<div class="${classes}" data-hand-idx="${i}">
+      <div class="stat stat-top">${statDisp(card.t)}</div>
+      <div class="stat stat-bottom">${statDisp(card.b)}</div>
+      <div class="stat stat-left">${statDisp(card.l)}</div>
+      <div class="stat stat-right">${statDisp(card.r)}</div>
+      <div class="card-body">
+        ${elementIcon ? `<span class="card-element">${elementIcon}</span>` : ''}
+        <span class="card-name">${card.name}</span>
+        <span class="card-level">Lv${card.lv}</span>
+      </div>
+    </div>`;
+  }
+  handEl.innerHTML = html;
+
+  // Attach click handlers
+  handEl.querySelectorAll('.hand-card:not(.used)').forEach(el => {
+    el.addEventListener('click', () => onHandCardClick(parseInt(el.dataset.handIdx)));
+  });
+}
+
+/** Render opponent mini hand */
+function renderOpponentHand() {
+  const el = document.getElementById('opponent-hand-mini');
+  if (!Game.rules.open) {
+    el.innerHTML = '<span style="font-size:0.6rem;color:#666;">Hand: ???</span>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < 5; i++) {
+    const used = Game.opponentUsed[i];
+    const card = Game.opponentHand[i];
+    const lvClass = cardLevelClass(card.lv);
+    html += `<div class="opponent-mini-card ${used ? 'used' : ''}">
+      <div class="mini-card-back ${lvClass}" title="${card.name}">${statDisp(card.t)}</div>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+/** Render scores */
+function renderScores() {
+  document.querySelector('#player-score .score').textContent = Game.scores.player;
+  document.querySelector('#opponent-score .score').textContent = Game.scores.opponent;
+}
+
+/** Render turn indicator */
+function updateTurnIndicator() {
+  const el = document.getElementById('turn-indicator');
+  if (Game.gameOver) {
+    el.textContent = Game.winner === 'player' ? 'You Win!' : Game.winner === 'opponent' ? 'You Lose!' : 'Draw!';
+    el.className = '';
+    return;
+  }
+  el.textContent = Game.processingAI ? 'Opponent thinking...' : (Game.currentTurn === 'player' ? 'Your Turn' : 'Opponent\'s Turn');
+  el.className = Game.currentTurn === 'player' ? 'player-turn' : 'opponent-turn';
+}
+
+/** Show game over overlay */
+function showGameOver() {
+  const overlay = document.getElementById('overlay');
+  const icon = overlay.querySelector('.result-icon');
+  const text = overlay.querySelector('.result-text');
+  const detail = overlay.querySelector('.result-detail');
+
+  if (Game.winner === 'player') {
+    icon.textContent = '🏆';
+    text.textContent = 'You Win!';
+    text.style.color = 'var(--player-color)';
+    detail.textContent = `${Game.scores.player} - ${Game.scores.opponent}`;
+  } else if (Game.winner === 'opponent') {
+    icon.textContent = '💀';
+    text.textContent = 'You Lose!';
+    text.style.color = 'var(--opponent-color)';
+    detail.textContent = `${Game.scores.player} - ${Game.scores.opponent}`;
+  } else {
+    icon.textContent = '🤝';
+    text.textContent = 'Draw!';
+    text.style.color = 'var(--gold)';
+    detail.textContent = `${Game.scores.player} - ${Game.scores.opponent}`;
+  }
+
+  overlay.classList.add('active');
+}
+
+function hideOverlay() {
+  document.getElementById('overlay').classList.remove('active');
+}
+
+/** Animate card placement */
+function animatePlacement(boardIdx) {
+  const cell = document.querySelector(`.cell[data-index="${boardIdx}"]`);
+  if (cell) {
+    cell.classList.add('place-anim');
+    setTimeout(() => cell.classList.remove('place-anim'), 500);
+  }
+}
+
+/** Animate card flip */
+function animateFlip(boardIdx, newOwner) {
+  const cell = document.querySelector(`.cell[data-index="${boardIdx}"]`);
+  if (cell) {
+    cell.classList.add(newOwner === 'player' ? 'flip-player' : 'flip-opponent');
+    setTimeout(() => {
+      cell.classList.remove('flip-player', 'flip-opponent');
+    }, 500);
+  }
+}
+
+/** Complete re-render */
+function renderAll() {
+  renderBoard();
+  renderHand();
+  renderOpponentHand();
+  renderScores();
+  updateTurnIndicator();
+  if (Game.gameOver) showGameOver();
+}
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+
+function onHandCardClick(idx) {
+  if (Game.gameOver || Game.currentTurn !== 'player' || Game.processingAI) return;
+  if (Game.playerUsed[idx]) return;
+
+  if (Game.selectedCardIdx === idx) {
+    // Deselect
+    Game.selectedCardIdx = null;
+  } else {
+    Game.selectedCardIdx = idx;
+  }
+  renderAll();
+}
+
+function onCellClick(idx) {
+  if (Game.gameOver || Game.currentTurn !== 'player' || Game.processingAI) return;
+  if (Game.board[idx] !== null) return;
+  if (Game.selectedCardIdx === null) return;
+
+  // Place the card
+  const result = placeCard(Game.selectedCardIdx, idx, 'player');
+
+  // Animate
+  renderAll();
+  animatePlacement(idx);
+  result.flipped.forEach(fIdx => animateFlip(fIdx, 'player'));
+
+  // Check game end
+  if (checkGameEnd()) {
+    renderAll();
+    return;
+  }
+
+  // AI's turn
+  Game.currentTurn = 'opponent';
+  updateTurnIndicator();
+  renderAll();
+  scheduleAIMove();
+}
+
+function onNewGame() {
+  hideOverlay();
+  initGame();
+}
+
+// ============================================================
+// RULES UI
+// ============================================================
+
+function setupRuleToggle(id, ruleKey) {
+  const label = document.getElementById(id);
+  if (!label) return;
+
+  // Set initial state
+  if (Game.rules[ruleKey]) label.classList.add('active');
+
+  label.addEventListener('click', () => {
+    Game.rules[ruleKey] = !Game.rules[ruleKey];
+    if (Game.rules[ruleKey]) {
+      label.classList.add('active');
+    } else {
+      label.classList.remove('active');
+    }
+    // Re-render opponent hand when toggling Open rule
+    if (ruleKey === 'open') renderOpponentHand();
+  });
+}
+
+function setupDifficulty() {
+  const select = document.getElementById('difficulty-select');
+  select.value = Game.difficulty;
+  select.addEventListener('change', () => {
+    Game.difficulty = select.value;
+  });
+}
+
+// ============================================================
+// GAME INITIALIZATION
+// ============================================================
+
+function initGame() {
+  // Reset state
+  Game.board = new Array(9).fill(null);
+  Game.playerUsed = new Array(5).fill(false);
+  Game.opponentUsed = new Array(5).fill(false);
+  Game.currentTurn = 'player';
+  Game.scores = { player: 0, opponent: 0 };
+  Game.gameOver = false;
+  Game.winner = null;
+  Game.selectedCardIdx = null;
+  Game.processingAI = false;
+
+  // Shuffle all cards and deal
+  const pool = shuffle(CARD_DB);
+  Game.playerHand = pool.slice(0, 5);
+  Game.opponentHand = pool.slice(5, 10);
+
+  // Random elemental board
+  Game.elementalBoard = new Array(9).fill(null);
+  if (Game.rules.elemental) {
+    const elements = ['fire', 'ice', 'lightning', 'earth', 'water', 'wind', 'poison', 'holy'];
+    // Randomly assign elements to 3-4 cells
+    const numElements = 3 + Math.floor(Math.random() * 2);
+    const indices = shuffle([0,1,2,3,4,5,6,7,8]).slice(0, numElements);
+    indices.forEach(i => {
+      Game.elementalBoard[i] = elements[Math.floor(Math.random() * elements.length)];
+    });
+  }
+
+  hideOverlay();
+  renderAll();
+}
+
+// ============================================================
+// STARTUP
+// ============================================================
+
+function bootstrap() {
+  setupRuleToggle('lbl-same', 'same');
+  setupRuleToggle('lbl-plus', 'plus');
+  setupRuleToggle('lbl-samewall', 'sameWall');
+  setupRuleToggle('lbl-combo', 'combo');
+  setupRuleToggle('lbl-open', 'open');
+  setupDifficulty();
+
+  document.getElementById('btn-new-game').addEventListener('click', onNewGame);
+  document.getElementById('overlay-btn').addEventListener('click', onNewGame);
+
+  initGame();
+}
+
+
+document.addEventListener('DOMContentLoaded', bootstrap);
+</script>
+
+</body>
+</html>

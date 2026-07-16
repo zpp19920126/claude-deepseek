@@ -1,0 +1,12 @@
+{
+  "pages": [
+    "pages/game/game"
+  ],
+  "window": {
+    "navigationBarTitleText": "马翼龙的飞机大战",
+    "navigationBarBackgroundColor": "#0a0a2e",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#000000"
+  },
+  "sitemapLocation": "sitemap.json"
+}

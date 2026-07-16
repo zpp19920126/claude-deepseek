@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/
+
+# WeChat Mini Program
+plane-shooter/.miniprogram/
