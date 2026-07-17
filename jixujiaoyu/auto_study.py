@@ -302,18 +302,25 @@ def main():
             print("  ✓ 已离开视频页")
             break
     else:
-        print("  回退: 返回前页 → 选课列表")
+        print("  点击无效，回退到前页...")
         run_js('window.history.back()')
         time.sleep(3)
-        # 确保回到选课列表
-        current = get_url()
-        if 'v_video' in current or 'v_courseDetails' in current:
+
+    # ---- 9. 返回选课列表 ----
+    print("\n[9] 返回选课列表")
+    current = get_url()
+    if 'v_selected_course' not in current:
+        # 先尝试点击页面上的"选课列表"面包屑
+        clicked = js_click_text("选课列表", "a") or js_click_text("选课列表", "span")
+        if not clicked:
+            # Vue Router 导航兜底
             vue_navigate("/v_selected_course", {
                 "trainplanId": trainplan_id, "platformId": "135", "hidePlanEndDate": "false"
             })
+    print(f"  {get_url()}")
 
     print(f"\n{'=' * 60}")
-    print(f"完成! 最终: {get_url()}")
+    print(f"✓ 全部完成! 最终: {get_url()}")
     print(f"截图: {SCREENSHOT_DIR}/")
     print(f"{'=' * 60}")
 
