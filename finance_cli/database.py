@@ -3,8 +3,9 @@
 """
 
 import sqlite3
+from calendar import monthrange
 
-from config import DB_PATH
+from config import DB_PATH, CATEGORIES  # CATEGORIES 在此导出供 pages 层使用
 
 
 def _get_db():
@@ -43,20 +44,45 @@ def add_transaction(amount, category, date_str, note):
     conn.close()
 
 
+def get_distinct_months():
+    """获取所有有记录的月份列表（YYYY-MM），用于下拉筛选"""
+    conn = _get_db()
+    rows = conn.execute(
+        "SELECT DISTINCT strftime('%Y-%m', date) AS month "
+        "FROM transactions ORDER BY month DESC"
+    ).fetchall()
+    conn.close()
+    return [r["month"] for r in rows]
+
+
 def get_transactions(month=None, categories=None):
-    """查询账目列表，可按月份和分类筛选"""
+    """查询账目列表，可按月份和分类筛选。
+
+    month: 'YYYY-MM' 字符串或 None（不筛选）
+    categories: 分类列表，None=不筛选，[]=不匹配任何分类
+    """
     conn = _get_db()
     query = "SELECT * FROM transactions WHERE 1=1"
     params = []
 
     if month:
-        query += " AND strftime('%Y-%m', date) = ?"
-        params.append(month)
+        # 用范围查询代替 strftime，让 SQLite 能使用索引
+        year, mon = month.split("-")
+        year_int, mon_int = int(year), int(mon)
+        _, last_day = monthrange(year_int, mon_int)
+        start = f"{month}-01"
+        end = f"{month}-{last_day:02d}"
+        query += " AND date >= ? AND date <= ?"
+        params.extend([start, end])
 
-    if categories:
-        placeholders = ",".join(["?"] * len(categories))
-        query += f" AND category IN ({placeholders})"
-        params.extend(categories)
+    if categories is not None:
+        # None=不筛选；[]=空列表，不匹配任何记录
+        if not categories:
+            query += " AND 1=0"  # 返回空结果
+        else:
+            placeholders = ",".join(["?"] * len(categories))
+            query += f" AND category IN ({placeholders})"
+            params.extend(categories)
 
     query += " ORDER BY date DESC, id DESC"
     rows = conn.execute(query, params).fetchall()

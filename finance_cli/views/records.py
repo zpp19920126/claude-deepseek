@@ -7,8 +7,15 @@ from datetime import date
 import streamlit as st
 import pandas as pd
 
-from config import CATEGORIES
-from database import add_transaction, get_transactions, get_transaction_by_id, delete_transaction
+from config import CURRENCY
+from database import (
+    CATEGORIES,
+    add_transaction,
+    get_distinct_months,
+    get_transaction_by_id,
+    get_transactions,
+    delete_transaction,
+)
 
 
 def show_records_page():
@@ -25,7 +32,7 @@ def show_records_page():
         with st.form("add_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
             with col1:
-                amount = st.number_input("金额（元）", min_value=0.0, step=0.5, format="%.2f")
+                amount = st.number_input("金额（元）", min_value=0.01, step=0.5, format="%.2f")
                 category = st.selectbox("分类", CATEGORIES)
             with col2:
                 record_date = st.date_input("日期", value=date.today())
@@ -38,7 +45,7 @@ def show_records_page():
                     st.error("金额必须大于 0")
                 else:
                     add_transaction(amount, category, str(record_date), note)
-                    st.success(f"已添加：{category} ¥{amount:.2f}")
+                    st.success(f"已添加：{category} {CURRENCY}{amount:.2f}")
 
     # ================================================================
     # Tab 2：查看列表
@@ -49,9 +56,7 @@ def show_records_page():
         # 筛选器
         col1, col2 = st.columns(2)
         with col1:
-            all_months = sorted(
-                {r["date"][:7] for r in get_transactions()}, reverse=True
-            )
+            all_months = get_distinct_months()
             filter_month = st.selectbox(
                 "按月份筛选", ["全部"] + all_months, key="filter_month"
             )
@@ -80,12 +85,18 @@ def show_records_page():
                     "note": "备注",
                 }
             )
-            df["金额"] = df["金额"].apply(lambda x: f"¥{x:.2f}")
 
-            st.dataframe(df, width="stretch", hide_index=True)
+            st.dataframe(
+                df,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "金额": st.column_config.NumberColumn(format=f"{CURRENCY}%.2f"),
+                },
+            )
 
             total = sum(r["amount"] for r in transactions)
-            st.metric(label=f"共 {len(transactions)} 笔，合计", value=f"¥{total:.2f}")
+            st.metric(label=f"共 {len(transactions)} 笔，合计", value=f"{CURRENCY}{total:.2f}")
 
     # ================================================================
     # Tab 3：删除账目
@@ -93,22 +104,48 @@ def show_records_page():
     with tab3:
         st.subheader("按 ID 删除账目")
 
-        trans_id = st.number_input("输入要删除的账目 ID", min_value=1, step=1)
+        # 用 session_state 追踪删除状态，解决 Streamlit rerun 后按钮消失的问题
+        if "delete_target_id" not in st.session_state:
+            st.session_state.delete_target_id = None
+
+        trans_id = st.number_input(
+            "输入要删除的账目 ID",
+            min_value=1,
+            step=1,
+            key="delete_id_input",
+        )
+
         col1, col2, _ = st.columns([1, 1, 3])
         with col1:
-            search_btn = st.button("🔍 查找", width="stretch")
+            if st.button("🔍 查找", width="stretch"):
+                record = get_transaction_by_id(trans_id)
+                if record is None:
+                    st.error(f"未找到 ID 为 {trans_id} 的记录")
+                    st.session_state.delete_target_id = None
+                else:
+                    st.session_state.delete_target_id = trans_id
 
-        if search_btn:
-            record = get_transaction_by_id(trans_id)
+        # 有确认目标时，显示确认界面（独立于查找按钮状态）
+        target_id = st.session_state.delete_target_id
+        if target_id is not None:
+            record = get_transaction_by_id(target_id)
             if record is None:
-                st.error(f"未找到 ID 为 {trans_id} 的记录")
+                st.error(f"未找到 ID 为 {target_id} 的记录")
+                st.session_state.delete_target_id = None
             else:
                 st.info(
                     f"**确认删除？**\n\n"
-                    f"💰 {record['category']} | ¥{record['amount']:.2f} | {record['date']}"
+                    f"💰 {record['category']} | {CURRENCY}{record['amount']:.2f} | {record['date']}"
                     + (f" | {record['note']}" if record["note"] else "")
                 )
-                if st.button("⚠️ 确认删除", type="primary", width="stretch"):
-                    delete_transaction(trans_id)
-                    st.success(f"ID {trans_id} 已删除")
-                    st.rerun()
+                col_confirm, col_cancel, _ = st.columns([1, 1, 3])
+                with col_confirm:
+                    if st.button("⚠️ 确认删除", type="primary", width="stretch"):
+                        delete_transaction(target_id)
+                        st.toast(f"ID {target_id} 已删除", icon="✅")
+                        st.session_state.delete_target_id = None
+                        st.rerun()
+                with col_cancel:
+                    if st.button("取消", width="stretch"):
+                        st.session_state.delete_target_id = None
+                        st.rerun()

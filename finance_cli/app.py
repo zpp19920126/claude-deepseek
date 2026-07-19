@@ -6,8 +6,8 @@
 import streamlit as st
 
 from database import init_db
-from pages.records import show_records_page
-from pages.stats import show_stats_page
+from views.records import show_records_page
+from views.stats import show_stats_page
 
 # ---- 页面配置 ----
 st.set_page_config(page_title="个人记账", page_icon="💰", layout="wide")

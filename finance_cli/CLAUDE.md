@@ -21,7 +21,7 @@ finance_cli/
 ├── app.py              # 入口（22行）— st.set_page_config + 侧边栏导航 + 路由分发
 ├── config.py           # 全局常量 — DB_PATH, CATEGORIES
 ├── database.py         # 数据库操作 — 连接、建表、CRUD、统计查询（纯函数，不依赖 Streamlit）
-├── pages/
+├── views/
 │   ├── __init__.py     # 包标记
 │   ├── records.py      # 记账管理页面 — show_records_page()，含添加/查看/删除三个 tab
 │   └── stats.py        # 分类统计页面 — show_stats_page()，含时间筛选 + 柱状图 + 统计表
@@ -32,10 +32,11 @@ finance_cli/
 ### 依赖关系
 
 ```
-config.py ← database.py ← pages/*.py ← app.py
+config.py ← database.py ← views/*.py ← app.py
 ```
 
-- pages 层不直接 import config，通过 database 间接使用
+- database.py 负责导入并重新导出 CATEGORIES，pages 层从 database 导入 CATEGORIES
+- pages 层可直接从 config 导入纯常量（如 CURRENCY）
 - app.py 只做路由，不写业务逻辑
 
 ## 运行方式
@@ -67,12 +68,12 @@ streamlit run app.py
 
 ## 页面功能
 
-### 🏠 记账管理 (`pages/records.py`)
+### 🏠 记账管理 (`views/records.py`)
 - **添加账目**: 表单（金额/分类/日期/备注），`st.form` + `clear_on_submit=True`
 - **查看列表**: 按月份 + 分类筛选，`st.dataframe` 表格展示，底部显示合计
 - **删除账目**: 输入 ID → 查找确认 → 删除（防止误操作，需两次点击）
 
-### 📊 分类统计 (`pages/stats.py`)
+### 📊 分类统计 (`views/stats.py`)
 - 时间范围：本月 / 近3月 / 近6月 / 全部
 - 左侧柱状图（`st.bar_chart`，按金额升序）
 - 右侧统计表（分类/笔数/总金额/占比）+ 总计

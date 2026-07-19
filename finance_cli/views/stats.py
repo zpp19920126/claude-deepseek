@@ -7,6 +7,7 @@ from datetime import date, timedelta
 import streamlit as st
 import pandas as pd
 
+from config import CURRENCY
 from database import get_stats
 
 
@@ -36,27 +37,30 @@ def show_stats_page():
     df_stats = pd.DataFrame(stats)
     df_stats.columns = ["分类", "笔数", "总金额"]
     grand_total = df_stats["总金额"].sum()
-    df_stats["占比"] = (df_stats["总金额"] / grand_total * 100).round(1)
-    df_stats["占比"] = df_stats["占比"].apply(lambda x: f"{x}%")
+
+    # 避免除零
+    if grand_total > 0:
+        df_stats["占比"] = (df_stats["总金额"] / grand_total * 100).round(1)
+        df_stats["占比"] = df_stats["占比"].apply(lambda x: f"{x}%")
+    else:
+        df_stats["占比"] = "0%"
 
     col_chart, col_table = st.columns([3, 2])
 
     with col_chart:
         st.subheader("柱状图")
-        chart_data = pd.DataFrame(
-            {"分类": [s["category"] for s in stats], "金额": [s["total"] for s in stats]}
-        ).set_index("分类")
-        chart_data = chart_data.sort_values("金额", ascending=True)
+        chart_data = df_stats[["分类", "总金额"]].set_index("分类")
+        chart_data = chart_data.sort_values("总金额", ascending=True)
         st.bar_chart(chart_data, width="stretch")
 
     with col_table:
         st.subheader("统计表")
         st.dataframe(
-            df_stats,
+            df_stats[["分类", "笔数", "总金额", "占比"]],
             width="stretch",
             hide_index=True,
             column_config={
-                "总金额": st.column_config.NumberColumn(format="¥%.2f"),
+                "总金额": st.column_config.NumberColumn(format=f"{CURRENCY}%.2f"),
             },
         )
-        st.metric(label="总计", value=f"¥{grand_total:.2f}")
+        st.metric(label="总计", value=f"{CURRENCY}{grand_total:.2f}")
