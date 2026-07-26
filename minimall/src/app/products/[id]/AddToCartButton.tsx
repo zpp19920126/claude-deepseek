@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCsrfToken } from "@/lib/client-utils";
 
 type AddToCartButtonProps = {
   productId: string;
@@ -9,10 +10,9 @@ type AddToCartButtonProps = {
   productImage: string | null;
   disabled: boolean;
 };
-
 /**
  * 加入购物车按钮（客户端组件）
- * 已登录用户调用 API，未登录用户存 localStorage
+ * 优先调用 API，401 时回退 localStorage
  */
 export function AddToCartButton({
   productId,
@@ -23,9 +23,44 @@ export function AddToCartButton({
 }: AddToCartButtonProps) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleAdd = () => {
-    // 暂时使用 localStorage 方案（认证系统完成后改为双后端）
+  const handleAdd = async () => {
+    setError("");
+    setAdded(false);
+
+    try {
+      const res = await fetch("/api/cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": getCsrfToken(),
+        },
+        body: JSON.stringify({ productId, quantity }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setAdded(true);
+        setTimeout(() => setAdded(false), 1500);
+        return;
+      }
+
+      // 401 → 未登录，回退 localStorage
+      if (res.status === 401) {
+        addToLocalStorage();
+        return;
+      }
+
+      setError(data.error || "操作失败");
+    } catch {
+      // 网络异常，尝试 localStorage
+      addToLocalStorage();
+    }
+  };
+
+  const addToLocalStorage = () => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const existing = cart.find(
       (item: { productId: string }) => item.productId === productId
@@ -51,40 +86,47 @@ export function AddToCartButton({
   };
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="flex items-center border border-gray-300 rounded-lg">
+    <div>
+      {error && (
+        <p className="text-sm text-red-500 mb-3">{error}</p>
+      )}
+      <div className="flex items-center gap-4">
+        {/* 数量选择 */}
+        <div className="flex items-center border border-gray-300 rounded-lg">
+          <button
+            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            className="px-3 py-2 text-gray-600 hover:bg-gray-100 transition-colors"
+            disabled={disabled}
+          >
+            −
+          </button>
+          <span className="px-4 py-2 text-sm font-medium min-w-[3rem] text-center">
+            {quantity}
+          </span>
+          <button
+            onClick={() => setQuantity(Math.min(99, quantity + 1))}
+            className="px-3 py-2 text-gray-600 hover:bg-gray-100 transition-colors"
+            disabled={disabled}
+          >
+            +
+          </button>
+        </div>
+
+        {/* 加购按钮 */}
         <button
-          onClick={() => setQuantity(Math.max(1, quantity - 1))}
-          className="px-3 py-2 text-gray-600 hover:bg-gray-100 transition-colors"
+          onClick={handleAdd}
           disabled={disabled}
+          className={`flex-1 py-3 px-6 rounded-lg font-medium text-sm transition-all ${
+            added
+              ? "bg-green-500 text-white"
+              : disabled
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"
+          }`}
         >
-          −
-        </button>
-        <span className="px-4 py-2 text-sm font-medium min-w-[3rem] text-center">
-          {quantity}
-        </span>
-        <button
-          onClick={() => setQuantity(Math.min(99, quantity + 1))}
-          className="px-3 py-2 text-gray-600 hover:bg-gray-100 transition-colors"
-          disabled={disabled}
-        >
-          +
+          {added ? "✓ 已加入购物车" : disabled ? "暂时缺货" : "加入购物车"}
         </button>
       </div>
-
-      <button
-        onClick={handleAdd}
-        disabled={disabled}
-        className={`flex-1 py-3 px-6 rounded-lg font-medium text-sm transition-all ${
-          added
-            ? "bg-green-500 text-white"
-            : disabled
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"
-        }`}
-      >
-        {added ? "✓ 已加入购物车" : disabled ? "暂时缺货" : "加入购物车"}
-      </button>
     </div>
   );
 }

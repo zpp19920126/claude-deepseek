@@ -2,13 +2,13 @@ import { z } from "zod";
 import { ORDER_STATUS_VALUES } from "@/lib/constants";
 
 export const loginSchema = z.object({
-  email: z.string().email("请输入有效的邮箱地址"),
+  email: z.string().trim().email("请输入有效的邮箱地址"),
   password: z.string().min(8, "密码至少8位"),
 });
 
 export const registerSchema = z
   .object({
-    email: z.string().email("请输入有效的邮箱地址"),
+    email: z.string().trim().email("请输入有效的邮箱地址"),
     password: z
       .string()
       .min(8, "密码至少8位")

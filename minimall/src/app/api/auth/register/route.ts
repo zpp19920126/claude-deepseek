@@ -6,7 +6,7 @@ import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 /**
  * POST /api/auth/register
- * 用户注册 — 验证邮箱唯一性，密码至少 6 位
+ * 用户注册 — 验证邮箱唯一性，密码至少 8 位含大小写字母和数字
  */
 export async function POST(request: NextRequest) {
   try {

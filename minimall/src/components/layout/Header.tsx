@@ -27,6 +27,9 @@ export async function Header() {
 
           {user ? (
             <>
+              <Link href="/cart" className="text-gray-600 hover:text-gray-900">
+                购物车
+              </Link>
               <Link href="/orders" className="text-gray-600 hover:text-gray-900">
                 我的订单
               </Link>

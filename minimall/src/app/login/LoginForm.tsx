@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 
 /**
  * 登录表单（客户端组件）
  */
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -33,16 +31,15 @@ export function LoginForm() {
           return;
         }
 
-        // 登录成功 → 跳转首页
-        router.push("/");
-        router.refresh();
+        // 登录成功 → 全页跳转确保 session 生效
+        window.location.href = "/";
       } catch {
         setError("网络异常，请稍后重试");
       } finally {
         setLoading(false);
       }
     },
-    [email, password, router]
+    [email, password]
   );
 
   return (

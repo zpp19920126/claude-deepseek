@@ -6,8 +6,14 @@ export const OrderStatus = {
   DELIVERED: "DELIVERED",
   CANCELLED: "CANCELLED",
 } as const;
-export type OrderStatusType = (typeof OrderStatus)[keyof typeof OrderStatus];
-export const ORDER_STATUS_VALUES = Object.values(OrderStatus) as [string, ...string[]];
+export const ORDER_STATUS_VALUES = [
+  "PENDING_PAYMENT",
+  "PAID",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+] as const;
+export type OrderStatusType = (typeof ORDER_STATUS_VALUES)[number];
 
 // 商品状态
 export const ProductStatus = {
