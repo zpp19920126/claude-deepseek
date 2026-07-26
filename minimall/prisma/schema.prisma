@@ -1,0 +1,159 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============== USER ==============
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String?
+  passwordHash    String
+  role            String   @default("USER")
+  totalSpent      Int      @default(0)     // 累计消费（分）
+  membershipLevel Int      @default(0)     // 心悦等级 0-3
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cartItems CartItem[]
+  orders    Order[]
+
+  @@map("users")
+}
+
+// ============== CATEGORY ==============
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+
+  @@map("categories")
+}
+
+// ============== PRODUCT ==============
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Int                             // 价格（分）
+  stock       Int      @default(0)
+  categoryId  String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category   Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  images     ProductImage[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@map("products")
+}
+
+// ============== PRODUCT IMAGE (Base64) ==============
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  data      String
+  mimeType  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+// ============== CART ==============
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("cart_items")
+}
+
+// ============== ORDER ==============
+
+model Order {
+  id             String    @id @default(cuid())
+  orderNo        String    @unique
+  userId         String
+  status         String    @default("PENDING_PAYMENT")
+  originalAmount Int                            // 折扣前原价（分）
+  discountRate   Int       @default(10000)      // 折扣率（基点），10000=100%
+  totalAmount    Int                            // 折后实付（分）
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  paidAt         DateTime?
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items   OrderItem[]
+  payment Payment?
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNo])
+  @@map("orders")
+}
+
+// ============== ORDER ITEM ==============
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String?
+  productName String
+  price       Int                            // 单价快照（分）
+  quantity    Int
+  subtotal    Int                            // 小计（分）
+  imageData   String?
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// ============== PAYMENT ==============
+
+model Payment {
+  id        String    @id @default(cuid())
+  orderId   String    @unique
+  amount    Int                            // 支付金额（分）
+  status    String    @default("PENDING")
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
