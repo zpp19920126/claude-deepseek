@@ -17,8 +17,8 @@ model User {
   name            String?
   passwordHash    String
   role            String   @default("USER")
-  totalSpent      Float    @default(0)
-  membershipLevel Int      @default(0)
+  totalSpent      Int      @default(0)     // 累计消费（分）
+  membershipLevel Int      @default(0)     // 心悦等级 0-3
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -49,7 +49,7 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String?
-  price       Float
+  price       Int                             // 价格（分）
   stock       Int      @default(0)
   categoryId  String?
   status      String   @default("ACTIVE")
@@ -107,14 +107,14 @@ model Order {
   orderNo        String    @unique
   userId         String
   status         String    @default("PENDING_PAYMENT")
-  originalAmount Float
-  discountRate   Float     @default(1.0)
-  totalAmount    Float
+  originalAmount Int                            // 折扣前原价（分）
+  discountRate   Int       @default(10000)      // 折扣率（基点），10000=100%
+  totalAmount    Int                            // 折后实付（分）
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   paidAt         DateTime?
 
-  user    User        @relation(fields: [userId], references: [id])
+  user    User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   items   OrderItem[]
   payment Payment?
 
@@ -131,9 +131,9 @@ model OrderItem {
   orderId     String
   productId   String?
   productName String
-  price       Float
+  price       Int                            // 单价快照（分）
   quantity    Int
-  subtotal    Float
+  subtotal    Int                            // 小计（分）
   imageData   String?
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -148,12 +148,12 @@ model OrderItem {
 model Payment {
   id        String    @id @default(cuid())
   orderId   String    @unique
-  amount    Float
+  amount    Int                            // 支付金额（分）
   status    String    @default("PENDING")
   createdAt DateTime  @default(now())
   paidAt    DateTime?
 
-  order Order @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("payments")
 }

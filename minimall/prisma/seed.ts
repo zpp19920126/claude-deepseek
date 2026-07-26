@@ -13,7 +13,7 @@ async function main() {
     create: {
       email: "admin@minimall.com",
       name: "管理员",
-      passwordHash: hashSync("admin123", 10),
+      passwordHash: hashSync("admin123", 12),
       role: "ADMIN",
     },
   });
@@ -44,14 +44,14 @@ async function main() {
   ]);
   console.log("Categories:", categories.map((c) => c.name).join(", "));
 
-  // 创建示例商品
+  // 创建示例商品（价格单位为分）
   const products = [
-    { name: "无线蓝牙耳机", price: 299, stock: 100, categoryId: categories[0].id, description: "高品质降噪蓝牙耳机，续航24小时" },
-    { name: "机械键盘", price: 599, stock: 50, categoryId: categories[0].id, description: "Cherry MX 青轴，RGB 背光" },
-    { name: "纯棉T恤", price: 99, stock: 200, categoryId: categories[1].id, description: "100%新疆长绒棉，舒适透气" },
-    { name: "运动跑鞋", price: 399, stock: 80, categoryId: categories[1].id, description: "轻便透气，适合日常跑步" },
-    { name: "有机坚果礼盒", price: 168, stock: 150, categoryId: categories[2].id, description: "精选六种坚果，健康零食" },
-    { name: "保温杯", price: 89, stock: 300, categoryId: categories[3].id, description: "316不锈钢，12小时保温" },
+    { name: "无线蓝牙耳机", price: 29900, stock: 100, categoryId: categories[0].id, description: "高品质降噪蓝牙耳机，续航24小时" },
+    { name: "机械键盘", price: 59900, stock: 50, categoryId: categories[0].id, description: "Cherry MX 青轴，RGB 背光" },
+    { name: "纯棉T恤", price: 9900, stock: 200, categoryId: categories[1].id, description: "100%新疆长绒棉，舒适透气" },
+    { name: "运动跑鞋", price: 39900, stock: 80, categoryId: categories[1].id, description: "轻便透气，适合日常跑步" },
+    { name: "有机坚果礼盒", price: 16800, stock: 150, categoryId: categories[2].id, description: "精选六种坚果，健康零食" },
+    { name: "保温杯", price: 8900, stock: 300, categoryId: categories[3].id, description: "316不锈钢，12小时保温" },
   ];
 
   for (const p of products) {

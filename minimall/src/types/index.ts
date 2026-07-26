@@ -1,3 +1,5 @@
+// ========== 购物车 ==========
+
 export interface CartItemData {
   id?: string;
   productId: string;
@@ -6,6 +8,8 @@ export interface CartItemData {
   quantity: number;
   image?: string;
 }
+
+// ========== API 响应 ==========
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -19,4 +23,11 @@ export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+// ========== 认证 ==========
+
+export interface SessionPayload {
+  userId: string;
+  role: string;
 }
