@@ -77,7 +77,10 @@ export async function POST(request: NextRequest) {
       return apiErrorResponse(400, "单位名称不能为空");
     }
 
-    const code = generateCustomerCode();
+    // 生成唯一编码（冲突时重试一次）
+    let code = generateCustomerCode();
+    const existing = await prisma.customer.findUnique({ where: { code } });
+    if (existing) code = generateCustomerCode();
 
     const customer = await prisma.customer.create({
       data: {
@@ -90,6 +93,7 @@ export async function POST(request: NextRequest) {
         mobile: mobile || null,
         email: email || null,
         address: address || null,
+        updatedBy: "public",
       },
     });
 
