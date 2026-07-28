@@ -60,3 +60,53 @@ export interface CategoryItem {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface CustomerItem {
+  id: string;
+  code: string;
+  name: string;
+  shortName: string | null;
+  pinyin: string | null;
+  priceMode: string | null;
+  address: string | null;
+  phone: string | null;
+  mobile: string | null;
+  email: string | null;
+  fax: string | null;
+  zipCode: string | null;
+  contactPerson: string | null;
+  taxId: string | null;
+  bank: string | null;
+  region: string | null;
+  updatedBy: string | null;
+  contractStartDate: string | null;
+  contractEndDate: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SupplierItem {
+  id: string;
+  code: string;
+  name: string;
+  shortName: string | null;
+  pinyin: string | null;
+  priceMode: string | null;
+  address: string | null;
+  phone: string | null;
+  mobile: string | null;
+  email: string | null;
+  fax: string | null;
+  zipCode: string | null;
+  contactPerson: string | null;
+  taxId: string | null;
+  bank: string | null;
+  region: string | null;
+  updatedBy: string | null;
+  contractStartDate: string | null;
+  contractEndDate: string | null;
+  orderStartTime: string | null;
+  orderStopTime: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}

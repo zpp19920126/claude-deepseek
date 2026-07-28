@@ -65,6 +65,11 @@ model Supplier {
   updatedBy         String?
   contractStartDate DateTime?
   contractEndDate   DateTime?
+  orderStartTime    String?   // 开始接单时间
+  orderStopTime     String?   // 停止接单时间
+  pinyin            String?   // 拼音码
+  mobile            String?   // 手机
+  email             String?   // 邮箱
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -93,6 +98,9 @@ model Customer {
   updatedBy         String?
   contractStartDate DateTime?
   contractEndDate   DateTime?
+  pinyin            String?   // 拼音码
+  mobile            String?   // 手机
+  email             String?   // 邮箱
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

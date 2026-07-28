@@ -41,9 +41,13 @@ export default async function Home() {
     <div className="min-h-screen bg-zinc-50">
       <header className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-6">
             <h1 className="text-xl font-bold">🥬 绿粮</h1>
-            <p className="text-xs text-muted-foreground">蔬菜配送管理系统</p>
+            <nav className="flex gap-4 text-sm">
+              <span className="text-foreground font-medium">商品</span>
+              <a href="/custom" className="text-muted-foreground hover:text-foreground">客户</a>
+              <a href="/supplier" className="text-muted-foreground hover:text-foreground">供应商</a>
+            </nav>
           </div>
           <a
             href="/admin"
