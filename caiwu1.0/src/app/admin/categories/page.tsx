@@ -11,11 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import CategoryFormDialog from "@/components/forms/CategoryFormDialog";
-
-function getCsrfToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]*)/);
-  return match ? match[1] : "";
-}
+import { getCsrfToken } from "@/lib/utils";
 
 interface Category {
   code: string;

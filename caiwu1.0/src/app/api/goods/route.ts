@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category") || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
 
-    const where: Record<string, unknown> = {};
+    const where: Prisma.ProductWhereInput = {};
 
     if (search) {
       where.OR = [

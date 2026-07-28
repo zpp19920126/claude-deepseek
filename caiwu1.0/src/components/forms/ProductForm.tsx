@@ -20,11 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import type { ProductItem, CategoryOption, UnitOption, SupplierOption } from "@/types";
-
-function getCsrfToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]*)/);
-  return match ? match[1] : "";
-}
+import { getCsrfToken, safeParseFloat, safeParseInt } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -98,7 +94,7 @@ export default function ProductForm({
         unitCode: unitCode || null,
         categoryCode: categoryCode || null,
         isRawVeg, isCleanVeg,
-        yieldRate: yieldRate ? parseFloat(yieldRate) : null,
+        yieldRate: yieldRate ? safeParseFloat(yieldRate) : null,
         defaultSupplierId: defaultSupplierId || null,
         defaultSupplierShortName: defaultSupplierId
           ? suppliers.find((s) => s.id === defaultSupplierId)?.shortName || null
@@ -106,7 +102,7 @@ export default function ProductForm({
         origin: origin || null,
         model: model || null,
         sorter: sorter || null,
-        shelfLife: shelfLife ? parseInt(shelfLife, 10) : null,
+        shelfLife: shelfLife ? safeParseInt(shelfLife) : null,
         remark: remark || null,
         operator: "admin",
         createdBy: isEdit ? undefined : "admin",

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
+import { unitSchema } from "@/lib/validations";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function GET() {
@@ -25,18 +26,18 @@ export async function POST(request: NextRequest) {
     if (!(await validateCsrf(request))) return apiErrorResponse(403, "CSRF 验证失败");
 
     const body = await request.json();
-    const { code, name } = body;
-
-    if (!code || !name) {
-      return apiErrorResponse(400, "单位编码和名称不能为空");
+    const parsed = unitSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiErrorResponse(400, parsed.error.issues[0]?.message || "参数错误");
     }
 
+    const { code } = parsed.data;
     const existing = await prisma.unit.findUnique({ where: { code } });
     if (existing) {
       return apiErrorResponse(409, `单位编码 ${code} 已存在`);
     }
 
-    const unit = await prisma.unit.create({ data: { code, name } });
+    const unit = await prisma.unit.create({ data: parsed.data });
     return apiSuccessResponse(unit, 201);
   } catch (error) {
     console.error("创建单位失败:", error);

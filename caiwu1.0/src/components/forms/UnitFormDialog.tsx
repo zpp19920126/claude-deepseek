@@ -11,11 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-
-function getCsrfToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]*)/);
-  return match ? match[1] : "";
-}
+import { getCsrfToken } from "@/lib/utils";
 
 interface Unit {
   code: string;

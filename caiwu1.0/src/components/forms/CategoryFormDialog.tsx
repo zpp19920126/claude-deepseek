@@ -11,11 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-
-function getCsrfToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]*)/);
-  return match ? match[1] : "";
-}
+import { getCsrfToken, safeParseInt } from "@/lib/utils";
 
 interface Category {
   code: string;
@@ -72,7 +68,7 @@ export default function CategoryFormDialog({ open, onOpenChange, category, onSuc
         ...(isEdit ? { newCode: code !== category!.code ? code : undefined } : { code }),
         name,
         costSharingMethod: costSharingMethod || null,
-        sharingCount: sharingCount ? parseInt(sharingCount, 10) : null,
+        sharingCount: sharingCount ? safeParseInt(sharingCount) : null,
         sorter: sorter || null,
       };
       const res = await fetch(url, {

@@ -3,13 +3,17 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getCsrfToken } from "@/lib/utils";
 
 export default function LogoutButton() {
   const router = useRouter();
 
   async function handleLogout() {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "x-csrf-token": getCsrfToken() },
+      });
       // 清除 CSRF cookie
       document.cookie = "csrf-token=; path=/; max-age=0";
       toast.success("已退出登录");

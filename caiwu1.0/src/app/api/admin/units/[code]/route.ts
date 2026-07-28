@@ -21,16 +21,21 @@ export async function PUT(
       return apiErrorResponse(404, "单位不存在");
     }
 
-    // 如果修改了编码
+    // 如果修改了编码 — 事务中更新关联商品 + 重建单位
     const newCode = body.code || code;
     if (newCode !== code) {
       const conflict = await prisma.unit.findUnique({ where: { code: newCode } });
       if (conflict) {
         return apiErrorResponse(409, `单位编码 ${newCode} 已存在`);
       }
-      // 删除旧的，创建新的（因为 code 是主键）
-      await prisma.unit.delete({ where: { code } });
-      const unit = await prisma.unit.create({ data: { code: newCode, name: name || existing.name } });
+      const unit = await prisma.$transaction(async (tx) => {
+        await tx.product.updateMany({
+          where: { unitCode: code },
+          data: { unitCode: newCode },
+        });
+        await tx.unit.delete({ where: { code } });
+        return tx.unit.create({ data: { code: newCode, name: name || existing.name } });
+      });
       return apiSuccessResponse(unit);
     }
 

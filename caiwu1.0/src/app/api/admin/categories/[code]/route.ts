@@ -27,16 +27,27 @@ export async function PUT(
       if (conflict) {
         return apiErrorResponse(409, `分类编码 ${targetCode} 已存在`);
       }
-      await prisma.category.delete({ where: { code } });
-      const category = await prisma.category.create({
-        data: {
-          code: targetCode,
-          name: name ?? existing.name,
-          icon: icon !== undefined ? icon : existing.icon,
-          costSharingMethod: costSharingMethod !== undefined ? costSharingMethod : existing.costSharingMethod,
-          sharingCount: sharingCount !== undefined ? sharingCount : existing.sharingCount,
-          sorter: sorter !== undefined ? sorter : existing.sorter,
-        },
+
+      // 在事务中更新关联商品 + 重建分类，避免外键冲突和数据丢失
+      const category = await prisma.$transaction(async (tx) => {
+        // 更新关联商品的外键
+        await tx.product.updateMany({
+          where: { categoryCode: code },
+          data: { categoryCode: targetCode },
+        });
+        // 删除旧分类
+        await tx.category.delete({ where: { code } });
+        // 创建新分类
+        return tx.category.create({
+          data: {
+            code: targetCode,
+            name: name ?? existing.name,
+            icon: icon !== undefined ? icon : existing.icon,
+            costSharingMethod: costSharingMethod !== undefined ? costSharingMethod : existing.costSharingMethod,
+            sharingCount: sharingCount !== undefined ? sharingCount : existing.sharingCount,
+            sorter: sorter !== undefined ? sorter : existing.sorter,
+          },
+        });
       });
       return apiSuccessResponse(category);
     }

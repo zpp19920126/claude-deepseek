@@ -68,20 +68,21 @@ export default function ProductListView({
   initialData: ListData;
 }) {
   const [data, setData] = useState<ListData>(initialData);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");     // 输入框值（不触发请求）
+  const [search, setSearch] = useState("");                // 实际筛选值（触发请求）
   const [category, setCategory] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (searchValue: string, categoryValue: string, pageValue: number) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.set("search", search);
-      if (category && category !== "all") params.set("category", category);
-      params.set("page", String(page));
+      if (searchValue) params.set("search", searchValue);
+      if (categoryValue && categoryValue !== "all") params.set("category", categoryValue);
+      params.set("page", String(pageValue));
 
       const res = await fetch(`/api/goods?${params}`);
       const json = await res.json();
@@ -93,16 +94,18 @@ export default function ProductListView({
     } finally {
       setLoading(false);
     }
-  }, [search, category, page]);
+  }, []);
 
+  // 初始加载 + search/category/page 变化时重新获取
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData(search, category, page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, category, page]);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     setPage(1);
-    fetchData();
+    setSearch(searchInput);
   }
 
   function handleAdd() {
@@ -118,7 +121,7 @@ export default function ProductListView({
   function handleFormSuccess() {
     setFormOpen(false);
     setEditingProduct(null);
-    fetchData();
+    fetchData(search, category, page);
   }
 
   return (
@@ -130,8 +133,8 @@ export default function ProductListView({
             <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-3">
               <Input
                 placeholder="搜索商品名称或编码..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="max-w-sm"
               />
               <Button type="submit" variant="secondary">

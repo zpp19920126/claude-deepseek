@@ -13,11 +13,7 @@ import {
 import { toast } from "sonner";
 import ProductForm from "@/components/forms/ProductForm";
 import type { ProductItem, CategoryOption, UnitOption, SupplierOption } from "@/types";
-
-function getCsrfToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]*)/);
-  return match ? match[1] : "";
-}
+import { getCsrfToken } from "@/lib/utils";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductItem[]>([]);
