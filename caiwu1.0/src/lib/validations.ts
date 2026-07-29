@@ -121,4 +121,12 @@ export const salesOrderSchema = z.object({
   createdBy: z.string().optional().nullable(),
   lastModifiedBy: z.string().optional().nullable(),
   preparedBy: z.string().optional().nullable(),
+  selfNo: z.string().optional().nullable(),
+  receiptAccount: z.string().optional().nullable(),
+  receiptAmount: z.number().optional().nullable(),
+  warehouse: z.string().optional().nullable(),
+  handler: z.string().optional().nullable(),
+  receiptDate: z.string().datetime().optional().nullable(),
+  content: z.string().optional().nullable(),
+  department: z.string().optional().nullable(),
 });

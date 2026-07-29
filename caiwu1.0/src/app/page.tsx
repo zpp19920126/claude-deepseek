@@ -47,6 +47,7 @@ export default async function Home() {
               <span className="text-foreground font-medium">商品</span>
               <a href="/custom" className="text-muted-foreground hover:text-foreground">客户</a>
               <a href="/supplier" className="text-muted-foreground hover:text-foreground">供应商</a>
+              <a href="/sale" className="text-muted-foreground hover:text-foreground">销售单</a>
             </nav>
           </div>
           <a

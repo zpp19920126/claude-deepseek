@@ -1,32 +1,27 @@
 import { prisma } from "@/lib/prisma";
-import CustomerListView from "@/components/CustomerListView";
+import SaleListView from "@/components/SaleListView";
 
 const PAGE_SIZE = 15;
 
-export default async function CustomPage() {
+export default async function SalePage() {
   const [items, total] = await Promise.all([
-    prisma.customer.findMany({
+    prisma.salesOrder.findMany({
+      include: {
+        customer: { select: { code: true, name: true, shortName: true } },
+      },
       orderBy: { updatedAt: "desc" },
       take: PAGE_SIZE,
-      select: {
-        id: true, code: true, name: true, shortName: true, pinyin: true,
-        contactPerson: true, phone: true, mobile: true, email: true, address: true,
-        priceMode: true, fax: true, zipCode: true, taxId: true, bank: true,
-        region: true, updatedBy: true,
-        contractStartDate: true, contractEndDate: true,
-        createdAt: true, updatedAt: true,
-      },
     }),
-    prisma.customer.count(),
+    prisma.salesOrder.count(),
   ]);
 
   const initialData = {
-    items: items.map((c) => ({
-      ...c,
-      createdAt: c.createdAt.toISOString(),
-      updatedAt: c.updatedAt.toISOString(),
-      contractStartDate: c.contractStartDate?.toISOString() ?? null,
-      contractEndDate: c.contractEndDate?.toISOString() ?? null,
+    items: items.map((o) => ({
+      ...o,
+      deliveryDate: o.deliveryDate?.toISOString() ?? null,
+      receiptDate: o.receiptDate?.toISOString() ?? null,
+      createdAt: o.createdAt.toISOString(),
+      updatedAt: o.updatedAt.toISOString(),
     })),
     total,
     page: 1,
@@ -42,17 +37,17 @@ export default async function CustomPage() {
             <a href="/" className="text-xl font-bold">🥬 绿粮</a>
             <nav className="flex gap-4 text-sm">
               <a href="/" className="text-muted-foreground hover:text-foreground">商品</a>
-              <a href="/custom" className="text-foreground font-medium">客户</a>
+              <a href="/custom" className="text-muted-foreground hover:text-foreground">客户</a>
               <a href="/supplier" className="text-muted-foreground hover:text-foreground">供应商</a>
-              <a href="/sale" className="text-muted-foreground hover:text-foreground">销售单</a>
+              <a href="/sale" className="text-foreground font-medium">销售单</a>
             </nav>
           </div>
           <a href="/admin" className="text-sm text-muted-foreground hover:text-foreground">管理后台 →</a>
         </div>
       </header>
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <h2 className="text-2xl font-bold mb-6">客户管理</h2>
-        <CustomerListView initialData={initialData} />
+        <h2 className="text-2xl font-bold mb-6">销售单管理</h2>
+        <SaleListView initialData={initialData} />
       </main>
     </div>
   );

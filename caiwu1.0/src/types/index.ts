@@ -110,3 +110,36 @@ export interface SupplierItem {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface SalesOrderItem {
+  id: string;
+  deliveryDate: string | null;
+  documentNo: string;
+  selfNo: string | null;
+  customerCode: string | null;
+  customerName: string | null;
+  customerShortName: string | null;
+  receiptAccount: string | null;
+  receiptAmount: number | null;
+  warehouse: string | null;
+  handler: string | null;
+  receiptDate: string | null;
+  amount: number | null;
+  discountAmount: number | null;
+  content: string | null;
+  department: string | null;
+  remark: string | null;
+  productCode: string | null;
+  productName: string | null;
+  orderUnit: string | null;
+  orderQuantity: number | null;
+  categoryCode: string | null;
+  supplierId: string | null;
+  sorter: string | null;
+  createdBy: string | null;
+  preparedBy: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  product?: { code: string; name: string } | null;
+  customer?: { code: string; name: string; shortName: string | null } | null;
+}

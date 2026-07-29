@@ -178,6 +178,17 @@ model SalesOrder {
   createdBy         String?
   lastModifiedBy    String?
   preparedBy        String?
+
+  // 新增字段
+  selfNo           String?   // 自编号
+  receiptAccount   String?   // 收款账户
+  receiptAmount    Float?    // 收款金额
+  warehouse        String?   // 出货仓库
+  handler          String?   // 经手人
+  receiptDate      DateTime? // 收款日期
+  content          String?   // 单据内容
+  department       String?   // 部门
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

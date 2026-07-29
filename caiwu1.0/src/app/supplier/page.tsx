@@ -45,6 +45,7 @@ export default async function SupplierPage() {
               <a href="/" className="text-muted-foreground hover:text-foreground">商品</a>
               <a href="/custom" className="text-muted-foreground hover:text-foreground">客户</a>
               <a href="/supplier" className="text-foreground font-medium">供应商</a>
+              <a href="/sale" className="text-muted-foreground hover:text-foreground">销售单</a>
             </nav>
           </div>
           <a href="/admin" className="text-sm text-muted-foreground hover:text-foreground">管理后台 →</a>
