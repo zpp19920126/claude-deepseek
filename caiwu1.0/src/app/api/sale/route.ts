@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
+import { salesOrderSchema } from "@/lib/validations";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 const PAGE_SIZE = 15;
@@ -59,35 +60,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const parsed = salesOrderSchema.omit({ documentNo: true }).safeParse(body);
+    if (!parsed.success) {
+      return apiErrorResponse(400, parsed.error.issues[0]?.message || "参数错误");
+    }
 
     let documentNo = generateDocumentNo();
     const existing = await prisma.salesOrder.findUnique({ where: { documentNo } });
     if (existing) documentNo = generateDocumentNo();
 
+    const { deliveryDate, receiptDate, productionDate, ...rest } = parsed.data;
     const order = await prisma.salesOrder.create({
       data: {
+        ...rest,
         documentNo,
-        deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : null,
-        selfNo: body.selfNo || null,
-        customerCode: body.customerCode || null,
-        customerName: body.customerName || null,
-        customerShortName: body.customerShortName || null,
-        receiptAccount: body.receiptAccount || null,
-        receiptAmount: body.receiptAmount ?? null,
-        warehouse: body.warehouse || null,
-        handler: body.handler || null,
-        receiptDate: body.receiptDate ? new Date(body.receiptDate) : null,
-        amount: body.amount ?? null,
-        discountAmount: body.discountAmount ?? null,
-        content: body.content || null,
-        department: body.department || null,
-        remark: body.remark || null,
-        productCode: body.productCode || null,
-        productName: body.productName || null,
-        categoryCode: body.categoryCode || null,
-        supplierId: body.supplierId || null,
-        sorter: body.sorter || null,
-        preparedBy: body.preparedBy || null,
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+        receiptDate: receiptDate ? new Date(receiptDate) : null,
+        productionDate: productionDate ? new Date(productionDate) : null,
         createdBy: "public",
       },
       include: { customer: { select: { code: true, name: true, shortName: true } } },

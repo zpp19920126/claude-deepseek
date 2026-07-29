@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
+import { supplierSchema } from "@/lib/validations";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 const PAGE_SIZE = 15;
@@ -71,10 +72,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, shortName, pinyin, contactPerson, phone, mobile, email, address, orderStartTime, orderStopTime } = body;
-
-    if (!name) {
-      return apiErrorResponse(400, "单位名称不能为空");
+    const parsed = supplierSchema.omit({ code: true }).safeParse(body);
+    if (!parsed.success) {
+      return apiErrorResponse(400, parsed.error.issues[0]?.message || "参数错误");
     }
 
     // 生成唯一编码（冲突时重试一次）
@@ -83,20 +83,7 @@ export async function POST(request: NextRequest) {
     if (existing) code = generateSupplierCode();
 
     const supplier = await prisma.supplier.create({
-      data: {
-        code,
-        name,
-        shortName: shortName || null,
-        pinyin: pinyin || null,
-        contactPerson: contactPerson || null,
-        phone: phone || null,
-        mobile: mobile || null,
-        email: email || null,
-        address: address || null,
-        orderStartTime: orderStartTime || null,
-        orderStopTime: orderStopTime || null,
-        updatedBy: "public",
-      },
+      data: { ...parsed.data, code, updatedBy: "public" },
     });
 
     return apiSuccessResponse(supplier, 201);

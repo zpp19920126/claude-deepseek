@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { productSchema } from "@/lib/validations";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 const PAGE_SIZE = 15;
@@ -64,31 +65,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { code, name, categoryCode, unitCode, shortName, origin, specification, model } = body;
-
-    if (!code || !name) {
-      return apiErrorResponse(400, "商品编码和商品名称为必填项");
+    const parsed = productSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiErrorResponse(400, parsed.error.issues[0]?.message || "参数错误");
     }
 
     // 检查编码唯一性
-    const existing = await prisma.product.findUnique({ where: { code } });
+    const existing = await prisma.product.findUnique({ where: { code: parsed.data.code } });
     if (existing) {
-      return apiErrorResponse(409, `商品编码 ${code} 已存在`);
+      return apiErrorResponse(409, `商品编码 ${parsed.data.code} 已存在`);
     }
 
     const product = await prisma.product.create({
-      data: {
-        code,
-        name,
-        categoryCode: categoryCode || null,
-        unitCode: unitCode || null,
-        shortName: shortName || null,
-        origin: origin || null,
-        specification: specification || null,
-        model: model || null,
-        createdBy: "public",
-        operator: "public",
-      },
+      data: { ...parsed.data, createdBy: "public", operator: "public" },
       include: {
         unit: { select: { code: true, name: true } },
         category: { select: { code: true, name: true } },

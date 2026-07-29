@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { customerSchema } from "@/lib/validations";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function GET(
@@ -24,24 +25,18 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, shortName, pinyin, contactPerson, phone, mobile, email, address } = body;
 
     const existing = await prisma.customer.findUnique({ where: { id } });
     if (!existing) return apiErrorResponse(404, "客户不存在");
 
+    const parsed = customerSchema.omit({ code: true }).partial().safeParse(body);
+    if (!parsed.success) {
+      return apiErrorResponse(400, parsed.error.issues[0]?.message || "参数错误");
+    }
+
     const customer = await prisma.customer.update({
       where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(shortName !== undefined && { shortName: shortName || null }),
-        ...(pinyin !== undefined && { pinyin: pinyin || null }),
-        ...(contactPerson !== undefined && { contactPerson: contactPerson || null }),
-        ...(phone !== undefined && { phone: phone || null }),
-        ...(mobile !== undefined && { mobile: mobile || null }),
-        ...(email !== undefined && { email: email || null }),
-        ...(address !== undefined && { address: address || null }),
-        updatedBy: "public",
-      },
+      data: { ...parsed.data, updatedBy: "public" },
     });
 
     return apiSuccessResponse(customer);

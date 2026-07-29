@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { salesOrderSchema } from "@/lib/validations";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function GET(
@@ -30,27 +31,20 @@ export async function PUT(
     const existing = await prisma.salesOrder.findUnique({ where: { id } });
     if (!existing) return apiErrorResponse(404, "销售单不存在");
 
+    const parsed = salesOrderSchema.partial().safeParse(body);
+    if (!parsed.success) {
+      return apiErrorResponse(400, parsed.error.issues[0]?.message || "参数错误");
+    }
+
+    const { deliveryDate, receiptDate, productionDate, documentNo, ...rest } = parsed.data;
     const order = await prisma.salesOrder.update({
       where: { id },
       data: {
-        ...(body.deliveryDate !== undefined && { deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : null }),
-        ...(body.selfNo !== undefined && { selfNo: body.selfNo || null }),
-        ...(body.customerCode !== undefined && { customerCode: body.customerCode || null }),
-        ...(body.customerName !== undefined && { customerName: body.customerName || null }),
-        ...(body.customerShortName !== undefined && { customerShortName: body.customerShortName || null }),
-        ...(body.receiptAccount !== undefined && { receiptAccount: body.receiptAccount || null }),
-        ...(body.receiptAmount !== undefined && { receiptAmount: body.receiptAmount ?? null }),
-        ...(body.warehouse !== undefined && { warehouse: body.warehouse || null }),
-        ...(body.handler !== undefined && { handler: body.handler || null }),
-        ...(body.receiptDate !== undefined && { receiptDate: body.receiptDate ? new Date(body.receiptDate) : null }),
-        ...(body.amount !== undefined && { amount: body.amount ?? null }),
-        ...(body.discountAmount !== undefined && { discountAmount: body.discountAmount ?? null }),
-        ...(body.content !== undefined && { content: body.content || null }),
-        ...(body.department !== undefined && { department: body.department || null }),
-        ...(body.remark !== undefined && { remark: body.remark || null }),
-        ...(body.productCode !== undefined && { productCode: body.productCode || null }),
-        ...(body.productName !== undefined && { productName: body.productName || null }),
-        ...(body.sorter !== undefined && { sorter: body.sorter || null }),
+        ...rest,
+        ...(deliveryDate !== undefined && { deliveryDate: deliveryDate ? new Date(deliveryDate) : null }),
+        ...(receiptDate !== undefined && { receiptDate: receiptDate ? new Date(receiptDate) : null }),
+        ...(productionDate !== undefined && { productionDate: productionDate ? new Date(productionDate) : null }),
+        ...(documentNo !== undefined && { documentNo }),
         lastModifiedBy: "public",
       },
       include: { customer: { select: { code: true, name: true, shortName: true } } },

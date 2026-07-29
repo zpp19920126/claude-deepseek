@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { productSchema } from "@/lib/validations";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 /**
@@ -48,21 +49,17 @@ export async function PUT(
       return apiErrorResponse(404, "商品不存在");
     }
 
-    // 只允许更新部分字段
-    const { name, categoryCode, unitCode, shortName, origin, specification, model } = body;
+    const parsed = productSchema.partial().safeParse(body);
+    if (!parsed.success) {
+      return apiErrorResponse(400, parsed.error.issues[0]?.message || "参数错误");
+    }
+
+    // 不允许修改编码
+    const { code: _, ...data } = parsed.data;
 
     const product = await prisma.product.update({
       where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(categoryCode !== undefined && { categoryCode: categoryCode || null }),
-        ...(unitCode !== undefined && { unitCode: unitCode || null }),
-        ...(shortName !== undefined && { shortName: shortName || null }),
-        ...(origin !== undefined && { origin: origin || null }),
-        ...(specification !== undefined && { specification: specification || null }),
-        ...(model !== undefined && { model: model || null }),
-        operator: "public",
-      },
+      data: { ...data, operator: "public" },
       include: {
         unit: { select: { code: true, name: true } },
         category: { select: { code: true, name: true } },
