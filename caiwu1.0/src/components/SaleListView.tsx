@@ -65,6 +65,10 @@ export default function SaleListView({ initialData }: { initialData: ListData })
               <Button type="submit" variant="secondary">搜索</Button>
             </form>
             <Button onClick={handleAdd}>+ 新建销售单</Button>
+            <Button variant="outline" onClick={() => {
+              const ids = data.items.map((o) => o.id).join(",");
+              if (ids) window.open(`/sale/print?ids=${ids}`, "_blank");
+            }}>🖨️ 打印列表</Button>
           </div>
         </CardContent>
       </Card>

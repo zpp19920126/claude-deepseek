@@ -56,6 +56,10 @@ export default function SalesOrdersPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">销售单管理</h2>
         <Button onClick={handleAdd}>+ 新建销售单</Button>
+        <Button variant="outline" onClick={() => {
+          const ids = orders.map((o) => o.id).join(",");
+          if (ids) window.open(`/sale/print?ids=${ids}`, "_blank");
+        }}>🖨️ 打印列表</Button>
       </div>
 
       <Card>
