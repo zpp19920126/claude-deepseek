@@ -25,7 +25,9 @@ model User {
 // ==================== 商品分类（支持树形） ====================
 model Category {
   id        Int        @id @default(autoincrement())
-  name      String     @unique
+  code      String     @unique // 分类编码：C001、C002...
+  name      String     @unique // 分类名称
+  shortName String?            // 分类简称
   parentId  Int?
   parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryTree")

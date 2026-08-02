@@ -26,7 +26,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "商品管理",
     items: [
       { label: "商品列表", href: "/products", icon: "🥬", enabled: true },
-      { label: "商品分类", href: "/categories", icon: "📁" },
+      { label: "商品分类", href: "/categories", icon: "📁", enabled: true },
       { label: "基本单位", href: "/units", icon: "📏", enabled: true },
     ],
   },

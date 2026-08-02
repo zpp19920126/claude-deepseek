@@ -18,6 +18,31 @@ export const updateUnitSchema = createUnitSchema.partial();
 export type CreateUnitInput = z.infer<typeof createUnitSchema>;
 export type UpdateUnitInput = z.infer<typeof updateUnitSchema>;
 
+// ==================== 商品分类 ====================
+export const createCategorySchema = z.object({
+  code: z
+    .string()
+    .min(1, "分类编码不能为空")
+    .max(20, "分类编码最长 20 字符")
+    .regex(/^[A-Za-z0-9_-]+$/, "分类编码只能包含字母、数字、下划线和连字符"),
+  name: z
+    .string()
+    .min(1, "分类名称不能为空")
+    .max(50, "分类名称最长 50 字符"),
+  shortName: z
+    .string()
+    .max(20, "分类简称最长 20 字符")
+    .optional()
+    .nullable(),
+  parentId: z.number().int().positive().optional().nullable(),
+  sortOrder: z.number().int().nonnegative().default(0),
+});
+
+export const updateCategorySchema = createCategorySchema.partial();
+
+export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
+export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
+
 // ==================== 商品 ====================
 export const createProductSchema = z.object({
   sku: z

@@ -57,29 +57,29 @@ async function main() {
 
   // ==================== 创建商品分类 ====================
   const leafVeg = await prisma.category.upsert({
-    where: { name: "叶菜类" },
+    where: { code: "C001" },
     update: {},
-    create: { name: "叶菜类", sortOrder: 1 },
+    create: { code: "C001", name: "叶菜类", shortName: "叶菜", sortOrder: 1 },
   });
   const rootVeg = await prisma.category.upsert({
-    where: { name: "根茎类" },
+    where: { code: "C002" },
     update: {},
-    create: { name: "根茎类", sortOrder: 2 },
+    create: { code: "C002", name: "根茎类", shortName: "根茎", sortOrder: 2 },
   });
   const fruitVeg = await prisma.category.upsert({
-    where: { name: "瓜果类" },
+    where: { code: "C003" },
     update: {},
-    create: { name: "瓜果类", sortOrder: 3 },
+    create: { code: "C003", name: "瓜果类", shortName: "瓜果", sortOrder: 3 },
   });
   const solanaceous = await prisma.category.upsert({
-    where: { name: "茄果类" },
+    where: { code: "C004" },
     update: {},
-    create: { name: "茄果类", sortOrder: 4 },
+    create: { code: "C004", name: "茄果类", shortName: "茄果", sortOrder: 4 },
   });
   const seasoning = await prisma.category.upsert({
-    where: { name: "调味类" },
+    where: { code: "C005" },
     update: {},
-    create: { name: "调味类", sortOrder: 5 },
+    create: { code: "C005", name: "调味类", shortName: "调味", sortOrder: 5 },
   });
   console.log("分类创建完成: 5 个");
 
