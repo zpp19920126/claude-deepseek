@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============== 管理员 ==============
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("ADMIN")
+  createdAt    DateTime @default(now())
+}
+
+// ============== 基本单位 ==============
+
+model Unit {
+  code String @id
+  name String
+
+  products Product[]
+
+  @@map("units")
+}
+
+// ============== 商品分类 ==============
+
+model Category {
+  code              String   @id
+  name              String
+  icon              String?
+  costSharingMethod String?
+  sharingCount      Int?
+  sorter            String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  products    Product[]
+  salesOrders SalesOrder[]
+
+  @@map("categories")
+}
+
+// ============== 供应商 ==============
+
+model Supplier {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  name              String
+  shortName         String?
+  priceMode         String?
+  address           String?
+  phone             String?
+  fax               String?
+  zipCode           String?
+  contactPerson     String?
+  taxId             String?
+  bank              String?
+  region            String?
+  updatedBy         String?
+  contractStartDate DateTime?
+  contractEndDate   DateTime?
+  orderStartTime    String?   // 开始接单时间
+  orderStopTime     String?   // 停止接单时间
+  pinyin            String?   // 拼音码
+  mobile            String?   // 手机
+  email             String?   // 邮箱
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  defaultProducts Product[]    @relation("DefaultSupplier")
+  salesOrders     SalesOrder[]
+
+  @@map("suppliers")
+}
+
+// ============== 客户 ==============
+
+model Customer {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  name              String
+  shortName         String?
+  priceMode         String?
+  address           String?
+  phone             String?
+  fax               String?
+  zipCode           String?
+  contactPerson     String?
+  taxId             String?
+  bank              String?
+  region            String?
+  updatedBy         String?
+  contractStartDate DateTime?
+  contractEndDate   DateTime?
+  pinyin            String?   // 拼音码
+  mobile            String?   // 手机
+  email             String?   // 邮箱
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  salesOrders SalesOrder[]
+
+  @@map("customers")
+}
+
+// ============== 商品 ==============
+
+model Product {
+  id                       String   @id @default(cuid())
+  code                     String   @unique
+  name                     String
+  shortName                String?
+  thumbnail                String?
+  mainImage                String?
+  specification            String?
+  unitCode                 String?
+  isRawVeg                 Boolean  @default(false)
+  isCleanVeg               Boolean  @default(false)
+  yieldRate                Float?
+  defaultSupplierId        String?
+  defaultSupplierShortName String?
+  origin                   String?
+  model                    String?
+  categoryCode             String?
+  sorter                   String?
+  shelfLife                Int?
+  operator                 String?
+  remark                   String?
+  createdBy                String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  unit            Unit?      @relation(fields: [unitCode], references: [code])
+  defaultSupplier Supplier?  @relation("DefaultSupplier", fields: [defaultSupplierId], references: [id])
+  category        Category?  @relation(fields: [categoryCode], references: [code])
+  salesOrders     SalesOrder[]
+
+  @@index([categoryCode])
+  @@index([unitCode])
+  @@index([defaultSupplierId])
+  @@map("products")
+}
+
+// ============== 销售单 ==============
+
+model SalesOrder {
+  id                String    @id @default(cuid())
+  deliveryDate      DateTime?
+  documentNo        String    @unique
+  productCode       String?
+  productName       String?
+  customerCode      String?
+  customerName      String?
+  customerShortName String?
+  productionDate    DateTime?
+  orderUnit         String?
+  orderQuantity     Float?
+  deliveryUnit      String?
+  remark            String?
+  deliveryQuantity  Float?
+  receivedQuantity  Float?
+  unitPrice         Float?
+  amount            Float?
+  discount          Float?
+  discountUnitPrice Float?
+  discountAmount    Float?
+  totalStock        Float?
+  costPrice         Float?
+  categoryCode      String?
+  supplierId        String?
+  sorter            String?
+  createdBy         String?
+  lastModifiedBy    String?
+  preparedBy        String?
+
+  // 新增字段
+  selfNo           String?   // 自编号
+  receiptAccount   String?   // 收款账户
+  receiptAmount    Float?    // 收款金额
+  warehouse        String?   // 出货仓库
+  handler          String?   // 经手人
+  receiptDate      DateTime? // 收款日期
+  content          String?   // 单据内容
+  department       String?   // 部门
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  product  Product?  @relation(fields: [productCode], references: [code])
+  customer Customer? @relation(fields: [customerCode], references: [code])
+  category Category? @relation(fields: [categoryCode], references: [code])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@index([productCode])
+  @@index([customerCode])
+  @@index([categoryCode])
+  @@index([supplierId])
+  @@index([documentNo])
+  @@map("sales_orders")
+}
+
+// ============== 审计日志 ==============
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // CREATE | UPDATE | DELETE
+  entity    String   // Product | Customer | Supplier | Unit | Category | SalesOrder
+  entityId  String   // 操作对象 ID
+  detail    String?  // 简要描述
+  operator  String   // 操作人
+  createdAt DateTime @default(now())
+
+  @@index([entity])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
