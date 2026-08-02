@@ -126,14 +126,14 @@ async function main() {
 
   // ==================== 创建客户 ====================
   const customers = [
-    { name: "阳光餐饮店", phone: "13800138001", address: "城东区美食街12号", contact: "王老板" },
-    { name: "好运饭店", phone: "13800138002", address: "城南区商业路88号", contact: "李经理" },
-    { name: "学校食堂", phone: "13800138003", address: "大学城学府路1号", contact: "张主任" },
-    { name: "天天超市", phone: "13800138004", address: "城中心广场路66号", contact: "赵店长" },
+    { code: "K001", name: "阳光餐饮店", shortName: "阳光", phone: "13800138001", address: "城东区美食街12号", contact: "王老板" },
+    { code: "K002", name: "好运饭店", shortName: "好运", phone: "13800138002", address: "城南区商业路88号", contact: "李经理" },
+    { code: "K003", name: "学校食堂", shortName: "学校", phone: "13800138003", address: "大学城学府路1号", contact: "张主任" },
+    { code: "K004", name: "天天超市", shortName: "天天", phone: "13800138004", address: "城中心广场路66号", contact: "赵店长" },
   ];
 
   for (const c of customers) {
-    const existing = await prisma.customer.findFirst({ where: { name: c.name } });
+    const existing = await prisma.customer.findUnique({ where: { code: c.code } });
     if (!existing) {
       await prisma.customer.create({ data: c });
     }
@@ -142,13 +142,13 @@ async function main() {
 
   // ==================== 创建供应商 ====================
   const suppliers = [
-    { name: "绿源蔬菜批发", phone: "13900139001", address: "农批市场A区10号", contact: "孙老板" },
-    { name: "丰收农产", phone: "13900139002", address: "农批市场B区25号", contact: "周经理" },
-    { name: "田间直供", phone: "13900139003", address: "城郊农业园3号", contact: "吴师傅" },
+    { code: "G001", name: "绿源蔬菜批发", shortName: "绿源", phone: "13900139001", address: "农批市场A区10号", contact: "孙老板" },
+    { code: "G002", name: "丰收农产", shortName: "丰收", phone: "13900139002", address: "农批市场B区25号", contact: "周经理" },
+    { code: "G003", name: "田间直供", shortName: "田间", phone: "13900139003", address: "城郊农业园3号", contact: "吴师傅" },
   ];
 
   for (const s of suppliers) {
-    const existing = await prisma.supplier.findFirst({ where: { name: s.name } });
+    const existing = await prisma.supplier.findUnique({ where: { code: s.code } });
     if (!existing) {
       await prisma.supplier.create({ data: s });
     }

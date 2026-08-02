@@ -4,13 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { logOperation } from "@/lib/logger";
 import { getClientIP } from "@/lib/ip";
-import { createSupplierSchema } from "@/lib/validations";
+import { createCustomerSchema } from "@/lib/validations";
 import type { PaginatedResponse } from "@/types";
-import type { Supplier } from "@prisma/client";
+import type { Customer } from "@prisma/client";
 
-// 获取供应商列表
+// 获取客户列表
 // - 选择器模式（无 page 参数）：返回 { success, data: [{id,name}] }，供 EntityPicker 使用
-// - 列表模式（带 page 参数）：返回 PaginatedResponse<Supplier>
+// - 列表模式（带 page 参数）：返回 PaginatedResponse<Customer>
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth();
@@ -32,13 +32,13 @@ export async function GET(request: NextRequest) {
           }
         : undefined;
 
-      const suppliers = await prisma.supplier.findMany({
+      const customers = await prisma.customer.findMany({
         where,
         select: { id: true, name: true },
         orderBy: { createdAt: "asc" },
       });
 
-      return NextResponse.json({ success: true, data: suppliers });
+      return NextResponse.json({ success: true, data: customers });
     }
 
     // 列表模式：分页 + 搜索（编码、名称、简称）
@@ -59,16 +59,16 @@ export async function GET(request: NextRequest) {
       : undefined;
 
     const [items, total] = await Promise.all([
-      prisma.supplier.findMany({
+      prisma.customer.findMany({
         where,
         orderBy: { createdAt: "asc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      prisma.supplier.count({ where }),
+      prisma.customer.count({ where }),
     ]);
 
-    const result: PaginatedResponse<Supplier> = {
+    const result: PaginatedResponse<Customer> = {
       items,
       total,
       page,
@@ -78,22 +78,22 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error("获取供应商列表失败:", error);
+    console.error("获取客户列表失败:", error);
     return NextResponse.json(
-      { success: false, error: "获取供应商列表失败" },
+      { success: false, error: "获取客户列表失败" },
       { status: 500 }
     );
   }
 }
 
-// 新增供应商
+// 新增客户
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth();
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
-    const parsed = createSupplierSchema.safeParse(body);
+    const parsed = createCustomerSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         {
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     const { code, name, shortName, phone, address, contact, remark } =
       parsed.data;
 
-    const created = await prisma.supplier.create({
+    const created = await prisma.customer.create({
       data: {
         code,
         name,
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     await logOperation({
       action: "create",
-      module: "supplier",
+      module: "customer",
       targetId: created.id,
       detail: { code, name, shortName, phone, address, contact, remark },
       ipAddress: getClientIP(request),
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: created,
-      message: "供应商创建成功",
+      message: "客户创建成功",
     });
   } catch (error) {
     // 识别 P2002 唯一约束冲突（code 重复）
@@ -139,13 +139,13 @@ export async function POST(request: NextRequest) {
       error.code === "P2002"
     ) {
       return NextResponse.json(
-        { success: false, error: "供应商编码已存在" },
+        { success: false, error: "客户编码已存在" },
         { status: 400 }
       );
     }
-    console.error("创建供应商失败:", error);
+    console.error("创建客户失败:", error);
     return NextResponse.json(
-      { success: false, error: "创建供应商失败" },
+      { success: false, error: "创建客户失败" },
       { status: 500 }
     );
   }

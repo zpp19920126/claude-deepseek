@@ -78,10 +78,12 @@ model Product {
 // ==================== 客户 ====================
 model Customer {
   id        Int      @id @default(autoincrement())
-  name      String
-  phone     String?
-  address   String?
-  contact   String?
+  code      String   @unique // 客户编码：K001、K002...
+  name      String              // 客户名称
+  shortName String?             // 客户简称
+  phone     String?             // 电话
+  address   String?             // 地址
+  contact   String?             // 联系人
   remark    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -92,11 +94,13 @@ model Customer {
 // ==================== 供应商 ====================
 model Supplier {
   id        Int      @id @default(autoincrement())
-  name      String
-  phone     String?
-  address   String?
-  contact   String?
-  remark     String?
+  code      String   @unique // 供应商编码：G001、G002...
+  name      String              // 供应商名称
+  shortName String?             // 供应商简称
+  phone     String?             // 电话
+  address   String?             // 地址
+  contact   String?             // 联系人
+  remark    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -33,8 +33,8 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "客户与供应商",
     items: [
-      { label: "客户管理", href: "/customers", icon: "👤" },
-      { label: "供应商管理", href: "/suppliers", icon: "🚚" },
+      { label: "客户管理", href: "/customers", icon: "👤", enabled: true },
+      { label: "供应商管理", href: "/suppliers", icon: "🚚", enabled: true },
     ],
   },
   {
