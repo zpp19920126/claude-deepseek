@@ -13,6 +13,7 @@ const navItems = [
   { href: "/admin/customers", label: "客户管理", icon: "🏢" },
   { href: "/admin/suppliers", label: "供应商管理", icon: "🚚" },
   { href: "/admin/sales-orders", label: "销售单管理", icon: "📋" },
+  { href: "/admin/audit", label: "操作日志", icon: "📝" },
 ];
 
 export default function Sidebar() {

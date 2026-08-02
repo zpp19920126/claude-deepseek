@@ -23,6 +23,7 @@ export default function UnitsPage() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [deleteError, setDeleteError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Unit | null>(null);
 
   const fetchUnits = useCallback(async () => {
@@ -57,10 +58,10 @@ export default function UnitsPage() {
         setDeleteTarget(null);
         fetchUnits();
       } else {
-        toast.error(json.error || "删除失败");
+        setDeleteError(json.error || "删除失败");
       }
     } catch {
-      toast.error("网络错误");
+      setDeleteError("网络错误，请重试");
     }
   }
 
@@ -108,7 +109,7 @@ export default function UnitsPage() {
       <UnitFormDialog open={formOpen} onOpenChange={setFormOpen} unit={editingUnit} onSuccess={handleFormSuccess} />
 
       {/* 删除确认 */}
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+      <Dialog open={!!deleteTarget} onOpenChange={() => { setDeleteTarget(null); setDeleteError(""); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>确认删除</DialogTitle>
@@ -117,7 +118,7 @@ export default function UnitsPage() {
             确定要删除单位「{deleteTarget?.name}」({deleteTarget?.code}) 吗？此操作不可撤销。
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteError(""); }}>取消</Button>
             <Button variant="destructive" onClick={handleDelete}>确认删除</Button>
           </DialogFooter>
         </DialogContent>

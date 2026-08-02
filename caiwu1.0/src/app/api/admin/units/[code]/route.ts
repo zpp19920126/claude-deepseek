@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function PUT(
@@ -36,6 +37,7 @@ export async function PUT(
         await tx.unit.delete({ where: { code } });
         return tx.unit.create({ data: { code: newCode, name: name || existing.name } });
       });
+      await auditLog({ action: "UPDATE", entity: "Unit", entityId: newCode, detail: `重命名单位: ${existing.name || existing.code} -> ${newCode}`, operator: "admin" });
       return apiSuccessResponse(unit);
     }
 
@@ -43,6 +45,7 @@ export async function PUT(
       where: { code },
       data: { name: name || existing.name },
     });
+  await auditLog({ action: "UPDATE", entity: "Unit", entityId: unit.code || unit.code, detail: `更新单位: ${unit.name || unit.code || ''}`, operator: "admin" });
     return apiSuccessResponse(unit);
   } catch (error) {
     console.error("更新单位失败:", error);
@@ -72,6 +75,7 @@ export async function DELETE(
     }
 
     await prisma.unit.delete({ where: { code } });
+  await auditLog({ action: "DELETE", entity: "Unit", entityId: existing.code, detail: `删除单位: ${existing.name || existing.code}`, operator: "admin" });
     return apiSuccessResponse(null);
   } catch (error) {
     console.error("删除单位失败:", error);

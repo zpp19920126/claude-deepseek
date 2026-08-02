@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
 import { customerSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function PUT(
@@ -32,6 +33,7 @@ export async function PUT(
       where: { id },
       data: parsed.data,
     });
+  await auditLog({ action: "UPDATE", entity: "Customer", entityId: customer.id, detail: `更新客户: ${customer.name || customer.code || ''}`, operator: "admin" });
     return apiSuccessResponse(customer);
   } catch (error) {
     console.error("更新客户失败:", error);
@@ -57,6 +59,7 @@ export async function DELETE(
     }
 
     await prisma.customer.delete({ where: { id } });
+  await auditLog({ action: "DELETE", entity: "Customer", entityId: existing.id, detail: `删除客户: ${existing.name || existing.code}`, operator: "admin" });
     return apiSuccessResponse(null);
   } catch (error) {
     console.error("删除客户失败:", error);

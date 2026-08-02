@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { supplierSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function GET(
@@ -39,6 +40,7 @@ export async function PUT(
       data: { ...parsed.data, updatedBy: "public" },
     });
 
+  await auditLog({ action: "UPDATE", entity: "Supplier", entityId: supplier.id, detail: `更新供应商: ${supplier.name || supplier.code || ''}`, operator: "public" });
     return apiSuccessResponse(supplier);
   } catch (error) {
     console.error("更新供应商失败:", error);

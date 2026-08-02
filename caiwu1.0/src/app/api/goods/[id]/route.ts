@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { productSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 /**
@@ -67,6 +68,7 @@ export async function PUT(
       },
     });
 
+  await auditLog({ action: "UPDATE", entity: "Product", entityId: product.id, detail: `更新商品: ${product.name || product.code || ''}`, operator: "public" });
     return apiSuccessResponse(product);
   } catch (error) {
     console.error("更新商品失败:", error);

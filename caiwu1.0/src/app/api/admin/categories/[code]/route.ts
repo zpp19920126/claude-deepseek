@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function PUT(
@@ -49,6 +50,7 @@ export async function PUT(
           },
         });
       });
+      await auditLog({ action: "UPDATE", entity: "Category", entityId: targetCode, detail: `重命名分类: ${existing.name || existing.code} -> ${targetCode}`, operator: "admin" });
       return apiSuccessResponse(category);
     }
 
@@ -62,6 +64,7 @@ export async function PUT(
         sorter: sorter !== undefined ? sorter : undefined,
       },
     });
+  await auditLog({ action: "UPDATE", entity: "Category", entityId: category.code || category.code, detail: `更新分类: ${category.name || category.code || ''}`, operator: "admin" });
     return apiSuccessResponse(category);
   } catch (error) {
     console.error("更新分类失败:", error);
@@ -90,6 +93,7 @@ export async function DELETE(
     }
 
     await prisma.category.delete({ where: { code } });
+  await auditLog({ action: "DELETE", entity: "Category", entityId: existing.code, detail: `删除分类: ${existing.name || existing.code}`, operator: "admin" });
     return apiSuccessResponse(null);
   } catch (error) {
     console.error("删除分类失败:", error);

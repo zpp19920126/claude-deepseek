@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
 import { supplierSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function PUT(
@@ -32,6 +33,7 @@ export async function PUT(
       where: { id },
       data: parsed.data,
     });
+  await auditLog({ action: "UPDATE", entity: "Supplier", entityId: supplier.id, detail: `更新供应商: ${supplier.name || supplier.code || ''}`, operator: "admin" });
     return apiSuccessResponse(supplier);
   } catch (error) {
     console.error("更新供应商失败:", error);
@@ -57,6 +59,7 @@ export async function DELETE(
     }
 
     await prisma.supplier.delete({ where: { id } });
+  await auditLog({ action: "DELETE", entity: "Supplier", entityId: existing.id, detail: `删除供应商: ${existing.name || existing.code}`, operator: "admin" });
     return apiSuccessResponse(null);
   } catch (error) {
     console.error("删除供应商失败:", error);

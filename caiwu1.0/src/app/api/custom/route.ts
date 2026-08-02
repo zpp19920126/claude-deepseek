@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
 import { customerSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 const PAGE_SIZE = 15;
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
       data: { ...parsed.data, code, updatedBy: "public" },
     });
 
+  await auditLog({ action: "CREATE", entity: "Customer", entityId: customer.id, detail: `创建客户: ${customer.name || customer.code || ''}`, operator: "public" });
     return apiSuccessResponse(customer, 201);
   } catch (error) {
     console.error("创建客户失败:", error);

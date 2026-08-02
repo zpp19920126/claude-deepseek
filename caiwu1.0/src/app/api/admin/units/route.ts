@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
 import { unitSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function GET() {
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const unit = await prisma.unit.create({ data: parsed.data });
+  await auditLog({ action: "CREATE", entity: "Unit", entityId: unit.code, detail: `创建单位: ${unit.name || unit.code || ''}`, operator: "admin" });
     return apiSuccessResponse(unit, 201);
   } catch (error) {
     console.error("创建单位失败:", error);

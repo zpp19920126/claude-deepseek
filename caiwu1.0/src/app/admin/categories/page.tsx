@@ -27,6 +27,7 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deleteError, setDeleteError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
   const fetchCategories = useCallback(async () => {
@@ -61,10 +62,10 @@ export default function CategoriesPage() {
         setDeleteTarget(null);
         fetchCategories();
       } else {
-        toast.error(json.error || "删除失败");
+        setDeleteError(json.error || "删除失败");
       }
     } catch {
-      toast.error("网络错误");
+      setDeleteError("网络错误，请重试");
     }
   }
 
@@ -117,7 +118,7 @@ export default function CategoriesPage() {
 
       <CategoryFormDialog open={formOpen} onOpenChange={setFormOpen} category={editingCategory} onSuccess={handleFormSuccess} />
 
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+      <Dialog open={!!deleteTarget} onOpenChange={() => { setDeleteTarget(null); setDeleteError(""); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>确认删除</DialogTitle>
@@ -126,7 +127,7 @@ export default function CategoriesPage() {
             确定要删除分类「{deleteTarget?.name}」({deleteTarget?.code}) 吗？此操作不可撤销。
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteError(""); }}>取消</Button>
             <Button variant="destructive" onClick={handleDelete}>确认删除</Button>
           </DialogFooter>
         </DialogContent>

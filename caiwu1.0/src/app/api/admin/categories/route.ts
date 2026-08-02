@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
 import { categorySchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function GET() {
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
         sorter: parsed.data.sorter ?? null,
       },
     });
+  await auditLog({ action: "CREATE", entity: "Category", entityId: category.code, detail: `创建分类: ${category.name || category.code || ''}`, operator: "admin" });
     return apiSuccessResponse(category, 201);
   } catch (error) {
     console.error("创建分类失败:", error);

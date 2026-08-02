@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
 import { supplierSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function GET() {
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
     if (existing) return apiErrorResponse(409, `供应商编码 ${parsed.data.code} 已存在`);
 
     const supplier = await prisma.supplier.create({ data: parsed.data });
+  await auditLog({ action: "CREATE", entity: "Supplier", entityId: supplier.id, detail: `创建供应商: ${supplier.name || supplier.code || ''}`, operator: "admin" });
     return apiSuccessResponse(supplier, 201);
   } catch (error) {
     console.error("创建供应商失败:", error);

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { productSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 const PAGE_SIZE = 15;
@@ -84,6 +85,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+  await auditLog({ action: "CREATE", entity: "Product", entityId: product.id, detail: `创建商品: ${product.name || product.code || ''}`, operator: "public" });
     return apiSuccessResponse(product, 201);
   } catch (error) {
     console.error("创建商品失败:", error);

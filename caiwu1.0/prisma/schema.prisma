@@ -204,3 +204,20 @@ model SalesOrder {
   @@index([documentNo])
   @@map("sales_orders")
 }
+
+// ============== 审计日志 ==============
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // CREATE | UPDATE | DELETE
+  entity    String   // Product | Customer | Supplier | Unit | Category | SalesOrder
+  entityId  String   // 操作对象 ID
+  detail    String?  // 简要描述
+  operator  String   // 操作人
+  createdAt DateTime @default(now())
+
+  @@index([entity])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

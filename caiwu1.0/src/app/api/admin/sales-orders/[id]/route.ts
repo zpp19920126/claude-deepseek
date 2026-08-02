@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
 import { salesOrderSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function PUT(
@@ -37,6 +38,7 @@ export async function PUT(
       },
     });
 
+  await auditLog({ action: "UPDATE", entity: "SalesOrder", entityId: order.id, detail: `更新销售单: ${order.documentNo || ''}`, operator: "admin" });
     return apiSuccessResponse(order);
   } catch (error) {
     console.error("更新销售单失败:", error);
@@ -57,6 +59,7 @@ export async function DELETE(
     if (!existing) return apiErrorResponse(404, "销售单不存在");
 
     await prisma.salesOrder.delete({ where: { id } });
+  await auditLog({ action: "DELETE", entity: "SalesOrder", entityId: existing.id, detail: `删除销售单: ${existing.documentNo || ''}`, operator: "admin" });
     return apiSuccessResponse(null);
   } catch (error) {
     console.error("删除销售单失败:", error);

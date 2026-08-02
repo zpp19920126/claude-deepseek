@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
 import { salesOrderSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 const PAGE_SIZE = 15;
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       include: { customer: { select: { code: true, name: true, shortName: true } } },
     });
 
+  await auditLog({ action: "CREATE", entity: "SalesOrder", entityId: order.id, detail: `创建销售单: ${order.documentNo || ''}`, operator: "public" });
     return apiSuccessResponse(order, 201);
   } catch (error) {
     console.error("创建销售单失败:", error);

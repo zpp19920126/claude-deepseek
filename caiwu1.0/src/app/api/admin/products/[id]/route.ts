@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { validateCsrf } from "@/lib/csrf";
 import { productSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function GET(
@@ -65,6 +66,7 @@ export async function PUT(
       },
     });
 
+  await auditLog({ action: "UPDATE", entity: "Product", entityId: product.id, detail: `更新商品: ${product.name || product.code || ''}`, operator: "admin" });
     return apiSuccessResponse(product);
   } catch (error) {
     console.error("更新商品失败:", error);
@@ -92,6 +94,7 @@ export async function DELETE(
     }
 
     await prisma.product.delete({ where: { id } });
+  await auditLog({ action: "DELETE", entity: "Product", entityId: existing.id, detail: `删除商品: ${existing.name || existing.code}`, operator: "admin" });
     return apiSuccessResponse(null);
   } catch (error) {
     console.error("删除商品失败:", error);

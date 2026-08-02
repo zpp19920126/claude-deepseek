@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { customerSchema } from "@/lib/validations";
+import { auditLog } from "@/lib/audit";
 import { apiSuccessResponse, apiErrorResponse } from "@/lib/api-error";
 
 export async function GET(
@@ -39,6 +40,7 @@ export async function PUT(
       data: { ...parsed.data, updatedBy: "public" },
     });
 
+  await auditLog({ action: "UPDATE", entity: "Customer", entityId: customer.id, detail: `更新客户: ${customer.name || customer.code || ''}`, operator: "public" });
     return apiSuccessResponse(customer);
   } catch (error) {
     console.error("更新客户失败:", error);
