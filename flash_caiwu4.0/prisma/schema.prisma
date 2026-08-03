@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 用户 ====================
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  name      String
+  role      String   @default("user") // admin | user
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  logs           OperationLog[]
+  salesOrders    SalesOrder[]
+  purchaseOrders PurchaseOrder[]
+}
+
+// ==================== 商品分类（支持树形） ====================
+model Category {
+  id        Int        @id @default(autoincrement())
+  code      String     @unique // 分类编码：C001、C002...
+  name      String     @unique // 分类名称
+  shortName String?            // 分类简称
+  parentId  Int?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  products Product[]
+}
+
+// ==================== 基本单位 ====================
+model Unit {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique // 单位编码：U001、U002...
+  name      String   @unique // 单位名称：个、斤、公斤、箱、包...
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+}
+
+// ==================== 商品 ====================
+model Product {
+  id         Int      @id @default(autoincrement())
+  sku        String   @unique // 商品编码
+  name       String            // 商品名称
+  shortName  String?           // 商品简称
+  categoryId Int
+  unitId     Int
+  supplierId Int?              // 默认供应商（可选）
+  price      Float    @default(0) // 销售价
+  cost       Float    @default(0) // 进货价
+  stock      Float    @default(0) // 当前库存
+  minStock   Float    @default(0) // 最低库存预警
+  status     String   @default("active") // active | inactive
+  image      String?
+  remark     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category      Category           @relation(fields: [categoryId], references: [id])
+  unit          Unit               @relation(fields: [unitId], references: [id])
+  supplier      Supplier?          @relation(fields: [supplierId], references: [id])
+  salesItems    SalesOrderItem[]
+  purchaseItems PurchaseOrderItem[]
+}
+
+// ==================== 客户 ====================
+model Customer {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique // 客户编码：K001、K002...
+  name      String              // 客户名称
+  shortName String?             // 客户简称
+  phone     String?             // 电话
+  address   String?             // 地址
+  contact   String?             // 联系人
+  remark    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  salesOrders SalesOrder[]
+}
+
+// ==================== 供应商 ====================
+model Supplier {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique // 供应商编码：G001、G002...
+  name      String              // 供应商名称
+  shortName String?             // 供应商简称
+  phone     String?             // 电话
+  address   String?             // 地址
+  contact   String?             // 联系人
+  remark    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchaseOrders PurchaseOrder[]
+  products       Product[]        // 作为默认供应商的商品
+}
+
+// ==================== 销售单 ====================
+model SalesOrder {
+  id          Int      @id @default(autoincrement())
+  orderNo     String   @unique
+  customerId  Int
+  userId      Int
+  totalAmount Float    @default(0)
+  status      String   @default("pending")
+  // pending(待确认) | confirmed(已确认) | delivered(已配送) | paid(已收款) | cancelled(已取消)
+  remark      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer Customer         @relation(fields: [customerId], references: [id])
+  user     User             @relation(fields: [userId], references: [id])
+  items    SalesOrderItem[]
+}
+
+model SalesOrderItem {
+  id        Int   @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Float
+  price     Float
+  subtotal  Float
+
+  order   SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product    @relation(fields: [productId], references: [id])
+}
+
+// ==================== 进货单 ====================
+model PurchaseOrder {
+  id          Int      @id @default(autoincrement())
+  orderNo     String   @unique
+  supplierId  Int
+  userId      Int
+  totalAmount Float    @default(0)
+  status      String   @default("pending")
+  // pending(待收货) | received(已入库) | cancelled(已取消)
+  remark      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  supplier Supplier           @relation(fields: [supplierId], references: [id])
+  user     User               @relation(fields: [userId], references: [id])
+  items    PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id        Int   @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Float
+  cost      Float
+  subtotal  Float
+
+  order   PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product       @relation(fields: [productId], references: [id])
+}
+
+// ==================== 操作日志 ====================
+model OperationLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  action    String   // create | update | delete | login | logout | export | import
+  module    String   // product | category | unit | customer | supplier | sales | purchase | user
+  targetId  Int?
+  detail    String?  // JSON 字符串，记录变更内容
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
