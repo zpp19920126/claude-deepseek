@@ -158,3 +158,78 @@ export const updateProductSchema = createProductSchema.partial();
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
+
+// ==================== 销售单 ====================
+export const salesOrderItemSchema = z.object({
+  productId: z.number().int().positive("请选择商品"),
+  quantity: z.number().positive("数量必须大于 0"),
+  price: z.number().min(0, "单价不能为负"),
+});
+
+export const createSalesOrderSchema = z.object({
+  customerId: z.number().int().positive("请选择客户"),
+  remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
+  items: z.array(salesOrderItemSchema).min(1, "至少添加一条商品明细"),
+});
+
+// 编辑整单（重建明细），与创建同构
+export const updateSalesOrderSchema = createSalesOrderSchema;
+
+export const salesStatusSchema = z.object({
+  to: z.enum(["confirmed", "delivered", "paid", "cancelled"]),
+});
+
+export type CreateSalesOrderInput = z.infer<typeof createSalesOrderSchema>;
+export type UpdateSalesOrderInput = z.infer<typeof updateSalesOrderSchema>;
+
+// ==================== 进货单 ====================
+export const purchaseOrderItemSchema = z.object({
+  productId: z.number().int().positive("请选择商品"),
+  quantity: z.number().positive("数量必须大于 0"),
+  cost: z.number().min(0, "单价不能为负"),
+});
+
+export const createPurchaseOrderSchema = z.object({
+  supplierId: z.number().int().positive("请选择供应商"),
+  remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
+  items: z.array(purchaseOrderItemSchema).min(1, "至少添加一条商品明细"),
+});
+
+export const updatePurchaseOrderSchema = createPurchaseOrderSchema;
+
+export const purchaseStatusSchema = z.object({
+  to: z.enum(["received", "cancelled"]),
+});
+
+export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>;
+export type UpdatePurchaseOrderInput = z.infer<typeof updatePurchaseOrderSchema>;
+
+// ==================== 用户管理 ====================
+export const createUserSchema = z.object({
+  username: z
+    .string()
+    .min(1, "用户名不能为空")
+    .max(20, "用户名最长 20 字符")
+    .regex(
+      /^[A-Za-z0-9_-]+$/,
+      "用户名只能包含字母、数字、下划线和连字符"
+    ),
+  password: z.string().min(6, "密码至少 6 位").max(50, "密码最长 50 字符"),
+  name: z.string().min(1, "姓名不能为空").max(50, "姓名最长 50 字符"),
+  role: z.enum(["admin", "user"]).default("user"),
+  status: z.enum(["active", "inactive"]).default("active"),
+});
+
+export const updateUserSchema = z.object({
+  name: z.string().min(1, "姓名不能为空").max(50, "姓名最长 50 字符").optional(),
+  role: z.enum(["admin", "user"]).optional(),
+  status: z.enum(["active", "inactive"]).optional(),
+  newPassword: z
+    .string()
+    .min(6, "密码至少 6 位")
+    .max(50, "密码最长 50 字符")
+    .optional(),
+});
+
+export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
