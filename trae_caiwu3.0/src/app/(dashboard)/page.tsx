@@ -20,10 +20,18 @@ export default async function DashboardPage() {
     totalCustomers,
     totalSuppliers,
   ] = await Promise.all([
-    // 今日销售（统计销售单数量；金额需通过配送单明细聚合，此处简化为计数）
-    prisma.salesOrder.count({
+    // 今日销售单（含配送单明细，用于计算金额）
+    prisma.salesOrder.findMany({
       where: {
         createdAt: { gte: todayStart, lt: todayEnd },
+        deliveryOrder: { status: { not: "cancelled" } },
+      },
+      select: {
+        deliveryOrder: {
+          select: {
+            items: { select: { receivedQuantity: true, unitPrice: true } },
+          },
+        },
       },
     }),
     // 今日进货
@@ -53,7 +61,7 @@ export default async function DashboardPage() {
           select: {
             orderNo: true,
             status: true,
-            items: { select: { deliveryQuantity: true, unitPrice: true } },
+            items: { select: { receivedQuantity: true, unitPrice: true } },
           },
         },
       },
@@ -76,9 +84,19 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      label: "今日销售单",
-      value: todaySales.toString(),
-      sub: "笔销售单",
+      label: "今日销售额",
+      value: formatCurrency(
+        todaySales.reduce(
+          (sum, o) =>
+            sum +
+            o.deliveryOrder.items.reduce(
+              (s, it) => s + it.receivedQuantity * it.unitPrice,
+              0
+            ),
+          0
+        )
+      ),
+      sub: `${todaySales.length} 笔订单`,
       icon: "💰",
       color: "bg-primary-lighter text-primary-dark",
     },
@@ -151,7 +169,7 @@ export default async function DashboardPage() {
             ) : (
               recentSales.map((order) => {
                 const amount = order.deliveryOrder.items.reduce(
-                  (s, it) => s + it.deliveryQuantity * it.unitPrice,
+                  (s, it) => s + it.receivedQuantity * it.unitPrice,
                   0
                 );
                 return (
