@@ -204,3 +204,16 @@ export const updateProductSchema = createProductSchema.partial();
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
+
+// ==================== 销售单（1:1 关联配送单） ====================
+export const createSalesOrderSchema = z.object({
+  deliveryOrderId: z.number().int().positive("请选择配送单"),
+  remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
+});
+
+export const updateSalesOrderSchema = z.object({
+  remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
+});
+
+export type CreateSalesOrderInput = z.infer<typeof createSalesOrderSchema>;
+export type UpdateSalesOrderInput = z.infer<typeof updateSalesOrderSchema>;

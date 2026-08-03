@@ -18,7 +18,8 @@ type Module =
   | "sales"
   | "purchase"
   | "user"
-  | "delivery_order";
+  | "delivery_order"
+  | "sales_order";
 
 interface LogOptions {
   action: Action;
