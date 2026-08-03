@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { SALES_ORDER_STATUS, PURCHASE_ORDER_STATUS } from "@/types";
+import { DELIVERY_ORDER_STATUS, PURCHASE_ORDER_STATUS } from "@/types";
 
 export default async function DashboardPage() {
   // 获取今日日期范围
@@ -20,14 +20,11 @@ export default async function DashboardPage() {
     totalCustomers,
     totalSuppliers,
   ] = await Promise.all([
-    // 今日销售
-    prisma.salesOrder.aggregate({
+    // 今日销售（统计销售单数量；金额需通过配送单明细聚合，此处简化为计数）
+    prisma.salesOrder.count({
       where: {
         createdAt: { gte: todayStart, lt: todayEnd },
-        status: { not: "cancelled" },
       },
-      _sum: { totalAmount: true },
-      _count: true,
     }),
     // 今日进货
     prisma.purchaseOrder.aggregate({
@@ -50,7 +47,16 @@ export default async function DashboardPage() {
     }),
     // 最近销售单
     prisma.salesOrder.findMany({
-      include: { customer: true },
+      include: {
+        customer: { select: { id: true, name: true } },
+        deliveryOrder: {
+          select: {
+            orderNo: true,
+            status: true,
+            items: { select: { deliveryQuantity: true, unitPrice: true } },
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
@@ -70,9 +76,9 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      label: "今日销售额",
-      value: formatCurrency(todaySales._sum.totalAmount || 0),
-      sub: `${todaySales._count} 笔订单`,
+      label: "今日销售单",
+      value: todaySales.toString(),
+      sub: "笔销售单",
       icon: "💰",
       color: "bg-primary-lighter text-primary-dark",
     },
@@ -143,26 +149,32 @@ export default async function DashboardPage() {
             {recentSales.length === 0 ? (
               <p className="p-5 text-center text-sm text-text-muted">暂无销售单</p>
             ) : (
-              recentSales.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 hover:bg-bg transition">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-text truncate">
-                      {order.customer.name}
-                    </p>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      {order.orderNo} · {formatDateTime(order.createdAt)}
-                    </p>
+              recentSales.map((order) => {
+                const amount = order.deliveryOrder.items.reduce(
+                  (s, it) => s + it.deliveryQuantity * it.unitPrice,
+                  0
+                );
+                return (
+                  <div key={order.id} className="flex items-center justify-between p-4 hover:bg-bg transition">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text truncate">
+                        {order.customer.name}
+                      </p>
+                      <p className="text-xs text-text-muted mt-0.5">
+                        {order.salesNo} · {formatDateTime(order.createdAt)}
+                      </p>
+                    </div>
+                    <div className="text-right ml-4 shrink-0">
+                      <p className="text-sm font-semibold text-text">
+                        {formatCurrency(amount)}
+                      </p>
+                      <p className="text-xs text-text-muted mt-0.5">
+                        {DELIVERY_ORDER_STATUS[order.deliveryOrder.status as keyof typeof DELIVERY_ORDER_STATUS] || order.deliveryOrder.status}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right ml-4 shrink-0">
-                    <p className="text-sm font-semibold text-text">
-                      {formatCurrency(order.totalAmount)}
-                    </p>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      {SALES_ORDER_STATUS[order.status as keyof typeof SALES_ORDER_STATUS] || order.status}
-                    </p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

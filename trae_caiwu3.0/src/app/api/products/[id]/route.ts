@@ -153,17 +153,17 @@ export async function DELETE(
       );
     }
 
-    // 检查是否被销售单或进货单引用
-    const [salesCount, purchaseCount] = await Promise.all([
-      prisma.salesOrderItem.count({ where: { productId } }),
+    // 检查是否被配送单或进货单引用
+    const [deliveryCount, purchaseCount] = await Promise.all([
+      prisma.deliveryOrderItem.count({ where: { productId } }),
       prisma.purchaseOrderItem.count({ where: { productId } }),
     ]);
 
-    if (salesCount > 0 || purchaseCount > 0) {
+    if (deliveryCount > 0 || purchaseCount > 0) {
       return NextResponse.json(
         {
           success: false,
-          error: `该商品已被销售单(${salesCount})或进货单(${purchaseCount})引用，无法删除`,
+          error: `该商品已被配送单(${deliveryCount})或进货单(${purchaseCount})引用，无法删除`,
         },
         { status: 400 }
       );
