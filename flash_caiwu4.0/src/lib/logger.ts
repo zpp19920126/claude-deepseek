@@ -8,7 +8,8 @@ type Action =
   | "login"
   | "logout"
   | "export"
-  | "import";
+  | "import"
+  | "status";
 type Module =
   | "product"
   | "category"
@@ -39,7 +40,8 @@ export async function logOperation(options: LogOptions): Promise<void> {
         action: options.action,
         module: options.module,
         targetId: options.targetId,
-        detail: options.detail ? JSON.stringify(options.detail) : null,
+        // 详情截断，防止超长内容灌库
+        detail: options.detail ? JSON.stringify(options.detail).slice(0, 500) : null,
         ipAddress: options.ipAddress,
       },
     });

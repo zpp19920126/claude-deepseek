@@ -63,6 +63,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 账号已停用，拒绝登录（不记日志，避免泄露账号状态）
+    if (user.status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "账号已停用，请联系管理员" },
+        { status: 401 }
+      );
+    }
+
     // 登录成功，重置限流计数
     resetRateLimit(rateLimitKey);
 

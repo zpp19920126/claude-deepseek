@@ -42,6 +42,7 @@ export async function getCurrentUser() {
       username: true,
       name: true,
       role: true,
+      status: true,
       createdAt: true,
     },
   });
@@ -62,7 +63,7 @@ export async function requireAuth(): Promise<JWTPayload | NextResponse> {
   // 验证用户仍存在且未被删除
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, role: true },
+    select: { id: true, role: true, status: true },
   });
 
   if (!user) {
@@ -70,6 +71,15 @@ export async function requireAuth(): Promise<JWTPayload | NextResponse> {
     await clearSession();
     return NextResponse.json(
       { success: false, error: "用户不存在，请重新登录" },
+      { status: 401 }
+    );
+  }
+
+  // 用户已停用，清理无效会话
+  if (user.status === "inactive") {
+    await clearSession();
+    return NextResponse.json(
+      { success: false, error: "账号已停用，请联系管理员" },
       { status: 401 }
     );
   }

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/session";
+import { requireAdmin } from "@/lib/session";
 import { logOperation } from "@/lib/logger";
 import { getClientIP } from "@/lib/ip";
 
 // 导出单位列表为 Excel
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth();
+    const auth = await requireAdmin();
     if (auth instanceof NextResponse) return auth;
 
     const units = await prisma.unit.findMany({
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // 记录导出日志
     await logOperation({
-      action: "create",
+      action: "export",
       module: "unit",
       detail: { exportCount: units.length, format: "xlsx" },
       ipAddress: getClientIP(request),

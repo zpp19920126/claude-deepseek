@@ -43,6 +43,12 @@ export const USER_ROLES = {
   user: "操作员",
 } as const;
 
+// 用户状态
+export const USER_STATUS = {
+  active: "启用",
+  inactive: "停用",
+} as const;
+
 // 商品状态
 export const PRODUCT_STATUS = {
   active: "在售",
