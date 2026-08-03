@@ -74,7 +74,6 @@ model Product {
   category      Category           @relation(fields: [categoryId], references: [id])
   unit          Unit               @relation(fields: [unitId], references: [id])
   supplier      Supplier?          @relation(fields: [supplierId], references: [id])
-  salesItems    SalesOrderItem[]
   purchaseItems PurchaseOrderItem[]
   deliveryItems DeliveryOrderItem[]
 }
@@ -113,34 +112,20 @@ model Supplier {
   products       Product[]        // 作为默认供应商的商品
 }
 
-// ==================== 销售单 ====================
+// ==================== 销售单（1:1 关联配送单） ====================
 model SalesOrder {
-  id          Int      @id @default(autoincrement())
-  orderNo     String   @unique
-  customerId  Int
-  userId      Int
-  totalAmount Float    @default(0)
-  status      String   @default("pending")
-  // pending(待确认) | confirmed(已确认) | delivered(已配送) | paid(已收款) | cancelled(已取消)
-  remark      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  salesNo         String   @unique // 自动生成：XS202608030001
+  deliveryOrderId Int      @unique // 1:1 关联配送单
+  customerId      Int              // 从配送单继承（冗余，便于查询）
+  userId          Int
+  remark          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  customer Customer         @relation(fields: [customerId], references: [id])
-  user     User             @relation(fields: [userId], references: [id])
-  items    SalesOrderItem[]
-}
-
-model SalesOrderItem {
-  id        Int   @id @default(autoincrement())
-  orderId   Int
-  productId Int
-  quantity  Float
-  price     Float
-  subtotal  Float
-
-  order   SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product    @relation(fields: [productId], references: [id])
+  deliveryOrder DeliveryOrder @relation(fields: [deliveryOrderId], references: [id])
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
 }
 
 // ==================== 进货单 ====================
@@ -187,6 +172,7 @@ model DeliveryOrder {
   customer Customer            @relation(fields: [customerId], references: [id])
   user     User                @relation(fields: [userId], references: [id])
   items    DeliveryOrderItem[]
+  salesOrder SalesOrder?
 }
 
 model DeliveryOrderItem {
