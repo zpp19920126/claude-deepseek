@@ -129,6 +129,52 @@ export const updateSupplierSchema = createSupplierSchema.partial();
 export type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
 export type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>;
 
+// ==================== 销售配送单 ====================
+const deliveryOrderItemSchema = z.object({
+  productId: z.number().int().positive("请选择商品"),
+  reservedUnitId: z.number().int().positive("请选择预定单位"),
+  reservedQuantity: z.number().min(0, "预定数量不能为负"),
+  deliveryUnitId: z.number().int().positive("请选择配送单位"),
+  deliveryQuantity: z.number().min(0, "配送数量不能为负"),
+  receivedQuantity: z.number().min(0, "实收数量不能为负"),
+  unitPrice: z.number().min(0, "单价不能为负"),
+});
+
+export const createDeliveryOrderSchema = z
+  .object({
+    customerId: z.number().int().positive("请选择客户"),
+    status: z
+      .enum(["pending", "delivered", "received", "cancelled"])
+      .default("pending"),
+    remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
+    items: z.array(deliveryOrderItemSchema).min(1, "至少添加一条明细"),
+  })
+  .refine(
+    (data) =>
+      new Set(data.items.map((i) => i.productId)).size === data.items.length,
+    { message: "同一单据内不能有重复商品", path: ["items"] }
+  );
+
+export const updateDeliveryOrderSchema = z
+  .object({
+    customerId: z.number().int().positive("请选择客户").optional(),
+    status: z.enum(["pending", "delivered", "received", "cancelled"]).optional(),
+    remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
+    items: z
+      .array(deliveryOrderItemSchema)
+      .min(1, "至少添加一条明细")
+      .optional(),
+  })
+  .refine(
+    (data) =>
+      !data.items ||
+      new Set(data.items.map((i) => i.productId)).size === data.items.length,
+    { message: "同一单据内不能有重复商品", path: ["items"] }
+  );
+
+export type CreateDeliveryOrderInput = z.infer<typeof createDeliveryOrderSchema>;
+export type UpdateDeliveryOrderInput = z.infer<typeof updateDeliveryOrderSchema>;
+
 // ==================== 商品 ====================
 export const createProductSchema = z.object({
   sku: z
