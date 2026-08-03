@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Toaster } from "@/components/shadcn/sonner";
 import { ToastContainer } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body>
         {children}
         <ToastContainer />
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );
