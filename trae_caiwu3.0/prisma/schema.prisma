@@ -20,6 +20,7 @@ model User {
   logs           OperationLog[]
   salesOrders    SalesOrder[]
   purchaseOrders PurchaseOrder[]
+  deliveryOrders DeliveryOrder[]
 }
 
 // ==================== 商品分类（支持树形） ====================
@@ -46,7 +47,9 @@ model Unit {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products Product[]
+  products               Product[]
+  deliveryReservedItems  DeliveryOrderItem[] @relation("DeliveryReservedUnit")
+  deliveryDeliveryItems  DeliveryOrderItem[] @relation("DeliveryDeliveryUnit")
 }
 
 // ==================== 商品 ====================
@@ -73,6 +76,7 @@ model Product {
   supplier      Supplier?          @relation(fields: [supplierId], references: [id])
   salesItems    SalesOrderItem[]
   purchaseItems PurchaseOrderItem[]
+  deliveryItems DeliveryOrderItem[]
 }
 
 // ==================== 客户 ====================
@@ -88,7 +92,8 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  salesOrders SalesOrder[]
+  salesOrders    SalesOrder[]
+  deliveryOrders DeliveryOrder[]
 }
 
 // ==================== 供应商 ====================
@@ -166,6 +171,39 @@ model PurchaseOrderItem {
 
   order   PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product       @relation(fields: [productId], references: [id])
+}
+
+// ==================== 销售配送单 ====================
+model DeliveryOrder {
+  id         Int      @id @default(autoincrement())
+  orderNo    String   @unique // 自动生成：SO202608020001
+  customerId Int
+  userId     Int
+  status     String   @default("pending") // pending | delivered | received | cancelled
+  remark     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer Customer            @relation(fields: [customerId], references: [id])
+  user     User                @relation(fields: [userId], references: [id])
+  items    DeliveryOrderItem[]
+}
+
+model DeliveryOrderItem {
+  id                Int   @id @default(autoincrement())
+  orderId           Int
+  productId         Int
+  reservedUnitId    Int
+  reservedQuantity  Float
+  deliveryUnitId    Int
+  deliveryQuantity  Float
+  receivedQuantity  Float
+  unitPrice         Float
+
+  order         DeliveryOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id])
+  reservedUnit  Unit          @relation("DeliveryReservedUnit", fields: [reservedUnitId], references: [id])
+  deliveryUnit  Unit          @relation("DeliveryDeliveryUnit", fields: [deliveryUnitId], references: [id])
 }
 
 // ==================== 操作日志 ====================

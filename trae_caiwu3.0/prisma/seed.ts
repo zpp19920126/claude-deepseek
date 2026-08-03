@@ -155,6 +155,69 @@ async function main() {
   }
   console.log(`供应商创建完成: ${suppliers.length} 个`);
 
+  // ==================== 创建销售配送单 ====================
+  const customerIds = await prisma.customer.findMany({ select: { id: true, code: true } });
+  const customerByCode = Object.fromEntries(customerIds.map((c) => [c.code, c.id]));
+  const productIds = await prisma.product.findMany({ select: { id: true, sku: true, price: true } });
+  const productBySku = Object.fromEntries(productIds.map((p) => [p.sku, p]));
+  const unitIds = await prisma.unit.findMany({ select: { id: true, name: true } });
+  const unitByName = Object.fromEntries(unitIds.map((u) => [u.name, u.id]));
+  const adminUser = await prisma.user.findUnique({ where: { username: "admin" } });
+
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
+  const orderNo1 = `SO${dateStr}0001`;
+  const orderNo2 = `SO${dateStr}0002`;
+
+  const deliveryOrders = [
+    {
+      orderNo: orderNo1,
+      customerCode: "K001",
+      status: "delivered",
+      remark: "首批配送",
+      items: [
+        { productSku: "VG-001", reservedUnit: "斤", reservedQty: 100, deliveryUnit: "斤", deliveryQty: 100, receivedQty: 100, price: 2.5 },
+        { productSku: "VG-008", reservedUnit: "斤", reservedQty: 50, deliveryUnit: "斤", deliveryQty: 50, receivedQty: 48, price: 4.5 },
+      ],
+    },
+    {
+      orderNo: orderNo2,
+      customerCode: "K002",
+      status: "pending",
+      remark: "",
+      items: [
+        { productSku: "VG-005", reservedUnit: "斤", reservedQty: 200, deliveryUnit: "公斤", deliveryQty: 100, receivedQty: 0, price: 2.0 },
+      ],
+    },
+  ];
+
+  for (const o of deliveryOrders) {
+    const existing = await prisma.deliveryOrder.findUnique({ where: { orderNo: o.orderNo } });
+    if (!existing) {
+      await prisma.deliveryOrder.create({
+        data: {
+          orderNo: o.orderNo,
+          customerId: customerByCode[o.customerCode],
+          userId: adminUser!.id,
+          status: o.status,
+          remark: o.remark,
+          items: {
+            create: o.items.map((it) => ({
+              productId: productBySku[it.productSku].id,
+              reservedUnitId: unitByName[it.reservedUnit],
+              reservedQuantity: it.reservedQty,
+              deliveryUnitId: unitByName[it.deliveryUnit],
+              deliveryQuantity: it.deliveryQty,
+              receivedQuantity: it.receivedQty,
+              unitPrice: it.price,
+            })),
+          },
+        },
+      });
+    }
+  }
+  console.log(`销售配送单创建完成: ${deliveryOrders.length} 个`);
+
   console.log("\n种子数据初始化完成！");
   console.log("默认账号:");
   console.log("  管理员: admin / admin123");
