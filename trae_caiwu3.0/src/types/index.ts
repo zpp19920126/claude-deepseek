@@ -37,6 +37,14 @@ export const PURCHASE_ORDER_STATUS = {
   cancelled: "已取消",
 } as const;
 
+// 配送单状态
+export const DELIVERY_ORDER_STATUS = {
+  pending: "待配送",
+  delivered: "已配送",
+  received: "已签收",
+  cancelled: "已取消",
+} as const;
+
 // 用户角色
 export const USER_ROLES = {
   admin: "管理员",
