@@ -17,7 +17,8 @@ type Module =
   | "supplier"
   | "sales"
   | "purchase"
-  | "user";
+  | "user"
+  | "delivery_order";
 
 interface LogOptions {
   action: Action;
