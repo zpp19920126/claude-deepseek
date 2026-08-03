@@ -40,6 +40,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "订单管理",
     items: [
+      { label: "配送单", href: "/delivery-orders", icon: "🚚", enabled: true },
       { label: "销售单", href: "/sales", icon: "📋" },
       { label: "进货管理", href: "/purchases", icon: "📦" },
     ],
