@@ -15,7 +15,6 @@ const ALLOWED_MIME = [
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 interface ParsedRow {
-  orderNo: string;
   supplierCode: string;
   productSku: string;
   reservedUnitName: string;
@@ -35,8 +34,8 @@ class ImportRowError extends Error {
 }
 
 // 批量导入进货单（POST 上传 Excel 文件，仅管理员）
-// Excel 列：进货单编号 | 供应商编码 | 商品编码 | 预定单位 | 预定数量 | 实收单位 | 实收数量 | 单价 | 备注
-// 每行一张进货单（一个供应商 + 一个商品项）
+// Excel 列：供应商编码 | 商品编码 | 预定单位 | 预定数量 | 实收单位 | 实收数量 | 单价 | 备注
+// 每行一张进货单（一个供应商 + 一个商品项），编号由系统自动生成
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin();
@@ -89,13 +88,11 @@ export async function POST(request: NextRequest) {
     // 逐行解析 + 校验
     const errors: { row: number; error: string }[] = [];
     const parsedRows: ParsedRow[] = [];
-    const seenOrderNo = new Set<string>();
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowIndex = i + 2;
 
-      const orderNo = String(row["进货单编号"] || "").trim();
       const supplierCode = String(row["供应商编码"] || "").trim();
       const productSku = String(row["商品编码"] || "").trim();
       const reservedUnitName = String(row["预定单位"] || "").trim();
@@ -105,10 +102,6 @@ export async function POST(request: NextRequest) {
       const unitPrice = Number(row["单价"] || 0);
       const remark = String(row["备注"] || "").trim();
 
-      if (!orderNo) {
-        errors.push({ row: rowIndex, error: "进货单编号不能为空" });
-        continue;
-      }
       if (!supplierCode) {
         errors.push({ row: rowIndex, error: "供应商编码不能为空" });
         continue;
@@ -125,15 +118,6 @@ export async function POST(request: NextRequest) {
         errors.push({ row: rowIndex, error: "实收单位不能为空" });
         continue;
       }
-
-      if (seenOrderNo.has(orderNo)) {
-        errors.push({
-          row: rowIndex,
-          error: `进货单编号"${orderNo}"在文件内重复`,
-        });
-        continue;
-      }
-      seenOrderNo.add(orderNo);
 
       if (Number.isNaN(reservedQuantity) || reservedQuantity < 0) {
         errors.push({ row: rowIndex, error: "预定数量必须为非负数" });
@@ -153,7 +137,6 @@ export async function POST(request: NextRequest) {
       }
 
       parsedRows.push({
-        orderNo,
         supplierCode,
         productSku,
         reservedUnitName,
@@ -252,7 +235,7 @@ export async function POST(request: NextRequest) {
             const reservedUnitId = unitMap.get(r.reservedUnitName)!;
             const receivedUnitId = unitMap.get(r.receivedUnitName)!;
 
-            // 生成新编号（忽略 Excel 中的编号，系统自动生成）
+            // 系统自动生成编号
             const orderNo = await generatePurchaseOrderNo(tx);
 
             await tx.purchaseOrder.create({

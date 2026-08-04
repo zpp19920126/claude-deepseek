@@ -10,7 +10,6 @@ export async function GET() {
 
     const template = [
       {
-        进货单编号: "JH202608030001",
         供应商编码: "S001",
         商品编码: "P001",
         预定单位: "斤",

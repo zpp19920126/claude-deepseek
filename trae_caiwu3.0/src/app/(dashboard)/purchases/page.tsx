@@ -58,7 +58,7 @@ export default async function PurchasesPage({ searchParams }: PageProps) {
     prisma.purchaseOrder.count({ where }),
   ]);
 
-  // 聚合 + 展开为每行一个商品项
+  // 展开为每行一个商品项（与导出页逻辑一致，避免数量与金额不匹配）
   type RowItem = {
     id: number;
     orderNo: string;
@@ -81,35 +81,28 @@ export default async function PurchasesPage({ searchParams }: PageProps) {
   const rows: RowItem[] = [];
   let index = (page - 1) * pageSize + 1;
   for (const o of items) {
-    const reservedAmount = o.items.reduce(
-      (s, it) => s + it.reservedQuantity * it.unitPrice,
-      0
-    );
-    const receivedAmount = o.items.reduce(
-      (s, it) => s + it.receivedQuantity * it.unitPrice,
-      0
-    );
-    // 每个进货单的第一个明细展开为一行，其余明细在详情页查看
     if (o.items.length > 0) {
-      const first = o.items[0];
-      rows.push({
-        id: o.id,
-        orderNo: o.orderNo,
-        supplierCode: o.supplier.code,
-        supplierName: o.supplier.name,
-        productSku: first.product.sku,
-        productName: first.product.name,
-        reservedUnitName: first.reservedUnit.name,
-        reservedQuantity: first.reservedQuantity,
-        receivedUnitName: first.receivedUnit.name,
-        receivedQuantity: first.receivedQuantity,
-        unitPrice: first.unitPrice,
-        reservedAmount,
-        receivedAmount,
-        status: o.status,
-        updatedAt: o.updatedAt,
-        index,
-      });
+      for (const it of o.items) {
+        rows.push({
+          id: o.id,
+          orderNo: o.orderNo,
+          supplierCode: o.supplier.code,
+          supplierName: o.supplier.name,
+          productSku: it.product.sku,
+          productName: it.product.name,
+          reservedUnitName: it.reservedUnit.name,
+          reservedQuantity: it.reservedQuantity,
+          receivedUnitName: it.receivedUnit.name,
+          receivedQuantity: it.receivedQuantity,
+          unitPrice: it.unitPrice,
+          reservedAmount: it.reservedQuantity * it.unitPrice,
+          receivedAmount: it.receivedQuantity * it.unitPrice,
+          status: o.status,
+          updatedAt: o.updatedAt,
+          index,
+        });
+        index++;
+      }
     } else {
       rows.push({
         id: o.id,
@@ -123,14 +116,14 @@ export default async function PurchasesPage({ searchParams }: PageProps) {
         receivedUnitName: "-",
         receivedQuantity: 0,
         unitPrice: 0,
-        reservedAmount,
-        receivedAmount,
+        reservedAmount: 0,
+        receivedAmount: 0,
         status: o.status,
         updatedAt: o.updatedAt,
         index,
       });
+      index++;
     }
-    index++;
   }
 
   const totalPages = Math.ceil(total / pageSize);
@@ -246,7 +239,7 @@ export default async function PurchasesPage({ searchParams }: PageProps) {
         <div>
           <h1 className="text-2xl font-bold text-text">进货管理</h1>
           <p className="text-sm text-text-muted mt-1">
-            共 {total} 条记录，第 {page}/{Math.max(1, totalPages)} 页
+            共 {total} 个进货单，第 {page}/{Math.max(1, totalPages)} 页
           </p>
         </div>
         <PurchaseToolbar />
