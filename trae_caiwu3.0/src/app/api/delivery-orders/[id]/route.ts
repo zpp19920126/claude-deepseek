@@ -20,7 +20,6 @@ export async function GET(
     const order = await prisma.deliveryOrder.findUnique({
       where: { id: orderId },
       include: {
-        customer: { select: { id: true, name: true, code: true } },
         items: {
           include: {
             product: { select: { id: true, sku: true, name: true } },
@@ -90,14 +89,13 @@ export async function PUT(
       );
     }
 
-    const { customerId, status, remark, items } = parsed.data;
+    const { status, remark, items } = parsed.data;
 
     const updated = await prisma.$transaction(async (tx) => {
       // 更新单据头
       await tx.deliveryOrder.update({
         where: { id: orderId },
         data: {
-          ...(customerId !== undefined && { customerId }),
           ...(status !== undefined && { status }),
           ...(remark !== undefined && { remark: remark ?? null }),
         },

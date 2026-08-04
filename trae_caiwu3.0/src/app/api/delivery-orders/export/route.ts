@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
 
     const orders = await prisma.deliveryOrder.findMany({
       include: {
-        customer: { select: { code: true, name: true } },
         items: {
           include: {
             product: { select: { sku: true, name: true } },
@@ -36,8 +35,6 @@ export async function GET(request: NextRequest) {
         exportData.push({
           序号: seq++,
           单据编号: o.orderNo,
-          客户编码: o.customer.code,
-          客户名称: o.customer.name,
           商品编码: it.product.sku,
           商品名称: it.product.name,
           预定单位: it.reservedUnit.name,
@@ -60,8 +57,6 @@ export async function GET(request: NextRequest) {
     const ws = XLSX.utils.json_to_sheet(exportData);
     ws["!cols"] = [
       { wch: 6 },
-      { wch: 16 },
-      { wch: 10 },
       { wch: 16 },
       { wch: 12 },
       { wch: 16 },

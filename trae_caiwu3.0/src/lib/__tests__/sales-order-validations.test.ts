@@ -7,6 +7,7 @@ import {
 function validInput() {
   return {
     deliveryOrderId: 1,
+    customerId: 1,
     remark: "测试备注",
   };
 }
@@ -60,6 +61,19 @@ describe("createSalesOrderSchema", () => {
   it("deliveryOrderId 为小数失败", () => {
     expect(
       createSalesOrderSchema.safeParse({ ...validInput(), deliveryOrderId: 1.5 })
+        .success
+    ).toBe(false);
+  });
+
+  it("customerId 缺失失败", () => {
+    const { customerId: _omitted, ...rest } = validInput();
+    void _omitted;
+    expect(createSalesOrderSchema.safeParse(rest).success).toBe(false);
+  });
+
+  it("customerId 非正整数失败", () => {
+    expect(
+      createSalesOrderSchema.safeParse({ ...validInput(), customerId: 0 })
         .success
     ).toBe(false);
   });

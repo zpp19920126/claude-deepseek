@@ -26,7 +26,6 @@ class ImportRowError extends Error {
 
 type ParsedRow = {
   group: string;
-  customerCode: string;
   productSku: string;
   reservedUnitName: string;
   reservedQty: number;
@@ -39,7 +38,7 @@ type ParsedRow = {
 };
 
 // 批量导入配送单（POST 上传 Excel 文件，仅管理员）
-// Excel 列：单据分组 | 客户编码 | 商品编码 | 预定单位 | 预定数量 | 配送单位 | 配送数量 | 实收数量 | 单价 | 备注
+// Excel 列：单据分组 | 商品编码 | 预定单位 | 预定数量 | 配送单位 | 配送数量 | 实收数量 | 单价 | 备注
 // 相同"单据分组"值的行归为一个配送单
 export async function POST(request: NextRequest) {
   try {
@@ -96,15 +95,12 @@ export async function POST(request: NextRequest) {
     const parsedRows: ParsedRow[] = [];
     // 文件内单据分组 + 商品编码 唯一性
     const seenGroupProduct = new Set<string>();
-    // 文件内单据分组 → 客户编码 映射（校验一致性）
-    const groupCustomer = new Map<string, string>();
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowIndex = i + 2;
 
       const group = String(row["单据分组"] || "").trim();
-      const customerCode = String(row["客户编码"] || "").trim();
       const productSku = String(row["商品编码"] || "").trim();
       const reservedUnitName = String(row["预定单位"] || "").trim();
       const deliveryUnitName = String(row["配送单位"] || "").trim();
@@ -114,27 +110,10 @@ export async function POST(request: NextRequest) {
         errors.push({ row: rowIndex, error: "单据分组不能为空" });
         continue;
       }
-      if (!customerCode) {
-        errors.push({ row: rowIndex, error: "客户编码不能为空" });
-        continue;
-      }
       if (!productSku) {
         errors.push({ row: rowIndex, error: "商品编码不能为空" });
         continue;
       }
-
-      // 校验同一分组客户一致
-      if (
-        groupCustomer.has(group) &&
-        groupCustomer.get(group) !== customerCode
-      ) {
-        errors.push({
-          row: rowIndex,
-          error: `单据分组"${group}"内客户编码不一致（应为${groupCustomer.get(group)}）`,
-        });
-        continue;
-      }
-      groupCustomer.set(group, customerCode);
 
       // 校验同一分组内商品不重复
       const gpKey = `${group}||${productSku}`;
@@ -171,7 +150,6 @@ export async function POST(request: NextRequest) {
 
       parsedRows.push({
         group,
-        customerCode,
         productSku,
         reservedUnitName,
         reservedQty,
@@ -192,8 +170,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 预查客户、商品、单位映射
-    const customerCodes = [...new Set(parsedRows.map((r) => r.customerCode))];
+    // 预查商品、单位映射
     const productSkus = [...new Set(parsedRows.map((r) => r.productSku))];
     const unitNames = [
       ...new Set([
@@ -202,11 +179,7 @@ export async function POST(request: NextRequest) {
       ]),
     ].filter(Boolean);
 
-    const [customers, products, units] = await Promise.all([
-      prisma.customer.findMany({
-        where: { code: { in: customerCodes } },
-        select: { id: true, code: true },
-      }),
+    const [products, units] = await Promise.all([
       prisma.product.findMany({
         where: { sku: { in: productSkus } },
         select: { id: true, sku: true },
@@ -217,20 +190,11 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    const customerMap = new Map(
-      customers.map((c) => [c.code, c.id] as const)
-    );
     const productMap = new Map(products.map((p) => [p.sku, p.id] as const));
     const unitMap = new Map(units.map((u) => [u.name, u.id] as const));
 
     // 校验引用存在性
     for (const r of parsedRows) {
-      if (!customerMap.has(r.customerCode)) {
-        errors.push({
-          row: r.rowIndex,
-          error: `客户编码"${r.customerCode}"不存在`,
-        });
-      }
       if (!productMap.has(r.productSku)) {
         errors.push({
           row: r.rowIndex,
@@ -277,7 +241,6 @@ export async function POST(request: NextRequest) {
             await tx.deliveryOrder.create({
               data: {
                 orderNo,
-                customerId: customerMap.get(groupRows[0].customerCode)!,
                 userId: user.id,
                 status: "pending",
                 remark: groupRows[0].remark || null,

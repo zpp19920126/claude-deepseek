@@ -26,13 +26,14 @@ class ImportRowError extends Error {
 
 type ParsedRow = {
   orderNo: string;
+  customerCode: string;
   remark: string;
   rowIndex: number;
 };
 
 // 批量导入销售单（POST 上传 Excel 文件，仅管理员）
-// Excel 列：单据编号 | 备注
-// 系统按"单据编号"匹配配送单 orderNo，自动创建销售单（1:1 绑定）
+// Excel 列：单据编号 | 客户编码 | 备注
+// 系统按"单据编号"匹配配送单 orderNo，按"客户编码"匹配客户，自动创建销售单（1:1 绑定）
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin();
@@ -94,10 +95,15 @@ export async function POST(request: NextRequest) {
       const rowIndex = i + 2;
 
       const orderNo = String(row["单据编号"] || "").trim();
+      const customerCode = String(row["客户编码"] || "").trim();
       const remark = String(row["备注"] || "").trim();
 
       if (!orderNo) {
         errors.push({ row: rowIndex, error: "单据编号不能为空" });
+        continue;
+      }
+      if (!customerCode) {
+        errors.push({ row: rowIndex, error: "客户编码不能为空" });
         continue;
       }
 
@@ -116,7 +122,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      parsedRows.push({ orderNo, remark, rowIndex });
+      parsedRows.push({ orderNo, customerCode, remark, rowIndex });
     }
 
     if (errors.length > 0) {
@@ -127,22 +133,36 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 预查配送单（按 orderNo 批量查询）
+    // 预查配送单（按 orderNo 批量查询）+ 客户（按 code 批量查询）
     const orderNos = [...new Set(parsedRows.map((r) => r.orderNo))];
-    const deliveryOrders = await prisma.deliveryOrder.findMany({
-      where: { orderNo: { in: orderNos } },
-      select: { id: true, orderNo: true, customerId: true },
-    });
+    const customerCodes = [...new Set(parsedRows.map((r) => r.customerCode))];
+    const [deliveryOrders, customers] = await Promise.all([
+      prisma.deliveryOrder.findMany({
+        where: { orderNo: { in: orderNos } },
+        select: { id: true, orderNo: true },
+      }),
+      prisma.customer.findMany({
+        where: { code: { in: customerCodes } },
+        select: { id: true, code: true },
+      }),
+    ]);
     const deliveryMap = new Map(
       deliveryOrders.map((d) => [d.orderNo, d] as const)
     );
+    const customerMap = new Map(customers.map((c) => [c.code, c.id] as const));
 
-    // 校验配送单存在性
+    // 校验配送单 + 客户存在性
     for (const r of parsedRows) {
       if (!deliveryMap.has(r.orderNo)) {
         errors.push({
           row: r.rowIndex,
           error: `单据编号"${r.orderNo}"对应的配送单不存在`,
+        });
+      }
+      if (!customerMap.has(r.customerCode)) {
+        errors.push({
+          row: r.rowIndex,
+          error: `客户编码"${r.customerCode}"不存在`,
         });
       }
     }
@@ -164,11 +184,12 @@ export async function POST(request: NextRequest) {
           try {
             const salesNo = await generateSalesOrderNo(tx);
             const delivery = deliveryMap.get(r.orderNo)!;
+            const customerId = customerMap.get(r.customerCode)!;
             await tx.salesOrder.create({
               data: {
                 salesNo,
                 deliveryOrderId: delivery.id,
-                customerId: delivery.customerId,
+                customerId,
                 userId: user.id,
                 remark: r.remark || null,
               },

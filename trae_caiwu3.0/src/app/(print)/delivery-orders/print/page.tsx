@@ -23,7 +23,6 @@ export default async function DeliveryOrdersPrintPage({
   const orders = await prisma.deliveryOrder.findMany({
     where,
     include: {
-      customer: { select: { id: true, name: true, code: true } },
       items: {
         include: {
           product: { select: { id: true, sku: true, name: true } },
@@ -105,10 +104,6 @@ export default async function DeliveryOrdersPrintPage({
                   <span>
                     <strong>单据编号：</strong>
                     {order.orderNo}
-                  </span>
-                  <span>
-                    <strong>客户：</strong>
-                    {order.customer?.code} {order.customer?.name}
                   </span>
                   <span>
                     <strong>状态：</strong>

@@ -28,7 +28,6 @@ export async function GET(request: NextRequest) {
       prisma.deliveryOrder.findMany({
         where,
         include: {
-          customer: { select: { id: true, name: true, code: true } },
           items: {
             select: {
               deliveryQuantity: true,
@@ -56,9 +55,6 @@ export async function GET(request: NextRequest) {
       return {
         id: o.id,
         orderNo: o.orderNo,
-        customerId: o.customerId,
-        customerName: o.customer.name,
-        customerCode: o.customer.code,
         status: o.status,
         remark: o.remark,
         createdAt: o.createdAt,
@@ -111,7 +107,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { customerId, status, remark, items } = parsed.data;
+    const { status, remark, items } = parsed.data;
 
     // 事务内生成编号 + 创建单据；P2002 时重试
     let created: Prisma.DeliveryOrderGetPayload<{
@@ -124,7 +120,6 @@ export async function POST(request: NextRequest) {
           return tx.deliveryOrder.create({
             data: {
               orderNo,
-              customerId,
               userId: user.id,
               status,
               remark: remark ?? null,
@@ -162,7 +157,6 @@ export async function POST(request: NextRequest) {
       targetId: created!.id,
       detail: {
         orderNo: created!.orderNo,
-        customerId,
         itemCount: items.length,
       },
       ipAddress: getClientIP(request),

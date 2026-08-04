@@ -94,7 +94,6 @@ model Customer {
   updatedAt DateTime @updatedAt
 
   salesOrders    SalesOrder[]
-  deliveryOrders DeliveryOrder[]
 }
 
 // ==================== 供应商 ====================
@@ -119,7 +118,7 @@ model SalesOrder {
   id              Int      @id @default(autoincrement())
   salesNo         String   @unique // 自动生成：XS202608030001
   deliveryOrderId Int      @unique // 1:1 关联配送单
-  customerId      Int              // 从配送单继承（冗余，便于查询）
+  customerId      Int              // 销售单直接绑定客户
   userId          Int
   remark          String?
   createdAt       DateTime @default(now())
@@ -166,14 +165,12 @@ model PurchaseOrderItem {
 model DeliveryOrder {
   id         Int      @id @default(autoincrement())
   orderNo    String   @unique // 自动生成：SO202608020001
-  customerId Int
   userId     Int
   status     String   @default("pending") // pending | delivered | received | cancelled
   remark     String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  customer Customer            @relation(fields: [customerId], references: [id])
   user     User                @relation(fields: [userId], references: [id])
   items    DeliveryOrderItem[]
   salesOrder SalesOrder?

@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
     const sampleData = [
       {
         单据分组: "组1",
-        客户编码: "K001",
         商品编码: "VG-001",
         预定单位: "斤",
         预定数量: 100,
@@ -23,7 +22,6 @@ export async function GET(request: NextRequest) {
       },
       {
         单据分组: "组1",
-        客户编码: "K001",
         商品编码: "VG-008",
         预定单位: "斤",
         预定数量: 50,
@@ -35,7 +33,6 @@ export async function GET(request: NextRequest) {
       },
       {
         单据分组: "组2",
-        客户编码: "K002",
         商品编码: "VG-005",
         预定单位: "斤",
         预定数量: 200,
@@ -51,7 +48,6 @@ export async function GET(request: NextRequest) {
     const ws = XLSX.utils.json_to_sheet(sampleData);
     ws["!cols"] = [
       { wch: 10 },
-      { wch: 12 },
       { wch: 12 },
       { wch: 10 },
       { wch: 10 },

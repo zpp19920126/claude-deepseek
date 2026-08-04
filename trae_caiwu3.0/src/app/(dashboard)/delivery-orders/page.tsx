@@ -10,10 +10,9 @@ import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-// 列表查询返回的配送单类型（含 customer 精简字段 + 明细统计字段）
+// 列表查询返回的配送单类型（含明细统计字段）
 type DeliveryOrderListItem = Prisma.DeliveryOrderGetPayload<{
   include: {
-    customer: { select: { id: true; name: true } };
     items: { select: { deliveryQuantity: true; unitPrice: true } };
   };
 }>;
@@ -150,7 +149,6 @@ export default async function DeliveryOrdersPage({ searchParams }: PageProps) {
     prisma.deliveryOrder.findMany({
       where,
       include: {
-        customer: { select: { id: true, name: true } },
         items: { select: { deliveryQuantity: true, unitPrice: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -192,13 +190,6 @@ export default async function DeliveryOrdersPage({ searchParams }: PageProps) {
       key: "orderNo",
       title: "单据编号",
       render: (row) => <span className="font-mono">{row.orderNo}</span>,
-    },
-    {
-      key: "customer",
-      title: "客户名称",
-      render: (row) => (
-        <span className="font-medium">{row.customer?.name || "-"}</span>
-      ),
     },
     {
       key: "itemCount",

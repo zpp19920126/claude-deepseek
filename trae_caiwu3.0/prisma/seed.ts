@@ -156,8 +156,6 @@ async function main() {
   console.log(`供应商创建完成: ${suppliers.length} 个`);
 
   // ==================== 创建销售配送单 ====================
-  const customerIds = await prisma.customer.findMany({ select: { id: true, code: true } });
-  const customerByCode = Object.fromEntries(customerIds.map((c) => [c.code, c.id]));
   const productIds = await prisma.product.findMany({ select: { id: true, sku: true, price: true } });
   const productBySku = Object.fromEntries(productIds.map((p) => [p.sku, p]));
   const unitIds = await prisma.unit.findMany({ select: { id: true, name: true } });
@@ -172,7 +170,6 @@ async function main() {
   const deliveryOrders = [
     {
       orderNo: orderNo1,
-      customerCode: "K001",
       status: "delivered",
       remark: "首批配送",
       items: [
@@ -182,7 +179,6 @@ async function main() {
     },
     {
       orderNo: orderNo2,
-      customerCode: "K002",
       status: "pending",
       remark: "",
       items: [
@@ -197,7 +193,6 @@ async function main() {
       await prisma.deliveryOrder.create({
         data: {
           orderNo: o.orderNo,
-          customerId: customerByCode[o.customerCode],
           userId: adminUser!.id,
           status: o.status,
           remark: o.remark,

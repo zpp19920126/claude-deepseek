@@ -24,8 +24,6 @@ interface DeliveryOrderItemForm {
 }
 
 interface FormState {
-  customerId: number | null;
-  customerName: string;
   status: string;
   remark: string;
   items: DeliveryOrderItemForm[];
@@ -45,8 +43,6 @@ const emptyItem: DeliveryOrderItemForm = {
 };
 
 const initialForm: FormState = {
-  customerId: null,
-  customerName: "",
   status: "pending",
   remark: "",
   items: [{ ...emptyItem }],
@@ -61,7 +57,6 @@ interface DeliveryOrderFormDialogProps {
 
 // 当前激活的实体选择器（同一时间只打开一个）
 type ActivePicker =
-  | { type: "customer" }
   | { type: "product"; index: number }
   | { type: "reservedUnit"; index: number }
   | { type: "deliveryUnit"; index: number }
@@ -82,8 +77,6 @@ interface LoadedItem {
 }
 
 interface LoadedOrder {
-  customerId: number;
-  customer?: { name?: string };
   status: string;
   remark?: string | null;
   items?: LoadedItem[];
@@ -91,7 +84,7 @@ interface LoadedOrder {
 
 /**
  * 销售配送单新增/编辑表单弹窗
- * - 客户选择、状态、备注构成单据头
+ * - 状态、备注构成单据头
  * - 明细行动态增删，每行的商品/单位均通过 EntityPicker 弹窗选择
  * - 提交时调用 POST /api/delivery-orders 或 PUT /api/delivery-orders/[id]
  */
@@ -122,8 +115,6 @@ export function DeliveryOrderFormDialog({
         if (json.success && json.data) {
           const o = json.data as LoadedOrder;
           setForm({
-            customerId: o.customerId,
-            customerName: o.customer?.name || "",
             status: o.status,
             remark: o.remark || "",
             items:
@@ -177,10 +168,6 @@ export function DeliveryOrderFormDialog({
     }));
   }
 
-  function handleSelectCustomer(item: { id: number; name: string }) {
-    setForm((f) => ({ ...f, customerId: item.id, customerName: item.name }));
-  }
-
   function handleSelectProduct(index: number, item: { id: number; name: string }) {
     setForm((f) => ({
       ...f,
@@ -221,10 +208,6 @@ export function DeliveryOrderFormDialog({
   }
 
   async function handleSubmit() {
-    if (!form.customerId) {
-      toast.error("请选择客户");
-      return;
-    }
     if (form.items.length === 0) {
       toast.error("至少添加一条明细");
       return;
@@ -245,7 +228,6 @@ export function DeliveryOrderFormDialog({
     }
 
     const payload = {
-      customerId: form.customerId,
       status: form.status,
       remark: form.remark.trim() || null,
       items: form.items.map((it) => ({
@@ -312,28 +294,8 @@ export function DeliveryOrderFormDialog({
           </p>
         ) : (
           <div className="space-y-4">
-            {/* 单据头：客户 / 状态 / 备注 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-text">
-                  客户<span className="text-danger ml-0.5">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    readOnly
-                    placeholder="请选择客户"
-                    value={form.customerName}
-                    className="flex-1 px-3 py-2 rounded-lg border border-border bg-bg text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setActivePicker({ type: "customer" })}
-                  >
-                    选择
-                  </Button>
-                </div>
-              </div>
+            {/* 单据头：状态 / 备注 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-text">
                   状态
@@ -544,19 +506,7 @@ export function DeliveryOrderFormDialog({
         )}
       </Modal>
 
-      {/* 实体选择器：客户 / 商品 / 预定单位 / 配送单位 */}
-      <EntityPicker
-        open={activePicker?.type === "customer"}
-        onClose={() => setActivePicker(null)}
-        onSelect={(item) => {
-          const ap = activePicker;
-          if (ap?.type === "customer") {
-            handleSelectCustomer(item);
-          }
-        }}
-        title="选择客户"
-        apiUrl="/api/customers"
-      />
+      {/* 实体选择器：商品 / 预定单位 / 配送单位 */}
       <EntityPicker
         open={activePicker?.type === "product"}
         onClose={() => setActivePicker(null)}

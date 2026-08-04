@@ -128,16 +128,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { deliveryOrderId, remark } = parsed.data;
+    const { deliveryOrderId, customerId, remark } = parsed.data;
 
     // 校验配送单存在
     const deliveryOrder = await prisma.deliveryOrder.findUnique({
       where: { id: deliveryOrderId },
-      select: { id: true, customerId: true, orderNo: true },
+      select: { id: true, orderNo: true },
     });
     if (!deliveryOrder) {
       return NextResponse.json(
         { success: false, error: "配送单不存在" },
+        { status: 404 }
+      );
+    }
+
+    // 校验客户存在
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true, name: true },
+    });
+    if (!customer) {
+      return NextResponse.json(
+        { success: false, error: "客户不存在" },
         { status: 404 }
       );
     }
@@ -152,7 +164,7 @@ export async function POST(request: NextRequest) {
             data: {
               salesNo,
               deliveryOrderId,
-              customerId: deliveryOrder.customerId,
+              customerId,
               userId: user.id,
               remark: remark ?? null,
             },
@@ -179,6 +191,8 @@ export async function POST(request: NextRequest) {
         salesNo: created!.salesNo,
         deliveryOrderId,
         deliveryOrderNo: deliveryOrder.orderNo,
+        customerId,
+        customerName: customer.name,
       },
       ipAddress: getClientIP(request),
     });

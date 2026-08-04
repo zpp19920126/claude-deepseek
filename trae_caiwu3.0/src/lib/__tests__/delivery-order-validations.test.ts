@@ -18,7 +18,6 @@ function validItem() {
 
 function validInput() {
   return {
-    customerId: 1,
     status: "pending",
     remark: "测试备注",
     items: [validItem()],
@@ -28,12 +27,6 @@ function validInput() {
 describe("createDeliveryOrderSchema", () => {
   it("合法输入通过", () => {
     expect(createDeliveryOrderSchema.safeParse(validInput()).success).toBe(true);
-  });
-
-  it("customerId 缺失失败", () => {
-    const { customerId: _omitted, ...rest } = validInput();
-    void _omitted;
-    expect(createDeliveryOrderSchema.safeParse(rest).success).toBe(false);
   });
 
   it("items 为空数组失败", () => {

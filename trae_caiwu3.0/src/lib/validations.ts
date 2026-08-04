@@ -142,7 +142,6 @@ const deliveryOrderItemSchema = z.object({
 
 export const createDeliveryOrderSchema = z
   .object({
-    customerId: z.number().int().positive("请选择客户"),
     status: z
       .enum(["pending", "delivered", "received", "cancelled"])
       .default("pending"),
@@ -157,7 +156,6 @@ export const createDeliveryOrderSchema = z
 
 export const updateDeliveryOrderSchema = z
   .object({
-    customerId: z.number().int().positive("请选择客户").optional(),
     status: z.enum(["pending", "delivered", "received", "cancelled"]).optional(),
     remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
     items: z
@@ -208,6 +206,7 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 // ==================== 销售单（1:1 关联配送单） ====================
 export const createSalesOrderSchema = z.object({
   deliveryOrderId: z.number().int().positive("请选择配送单"),
+  customerId: z.number().int().positive("请选择客户"),
   remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
 });
 

@@ -121,14 +121,12 @@ class DeliveryOrderItemCreate(BaseModel):
 
 
 class DeliveryOrderCreate(BaseModel):
-    customerId: int
     status: str = "pending"
     remark: Optional[str] = None
     items: List[DeliveryOrderItemCreate]
 
 
 class DeliveryOrderUpdate(BaseModel):
-    customerId: Optional[int] = None
     status: Optional[str] = None
     remark: Optional[str] = None
     items: Optional[List[DeliveryOrderItemCreate]] = None
@@ -137,6 +135,7 @@ class DeliveryOrderUpdate(BaseModel):
 # ==================== 销售单 ====================
 class SalesOrderCreate(BaseModel):
     deliveryOrderId: int
+    customerId: int
     remark: Optional[str] = None
 
 

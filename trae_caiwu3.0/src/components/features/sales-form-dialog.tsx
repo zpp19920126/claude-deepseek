@@ -25,10 +25,13 @@ export function SalesFormDialog({
 
   const [deliveryOrderId, setDeliveryOrderId] = useState<number | null>(null);
   const [deliveryOrderNo, setDeliveryOrderNo] = useState("");
+  const [customerId, setCustomerId] = useState<number | null>(null);
+  const [customerName, setCustomerName] = useState("");
   const [remark, setRemark] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [deliveryPickerOpen, setDeliveryPickerOpen] = useState(false);
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
 
   // 编辑模式：加载现有销售单数据
   useEffect(() => {
@@ -40,6 +43,8 @@ export function SalesFormDialog({
         if (json.success) {
           setDeliveryOrderId(json.data.deliveryOrderId);
           setDeliveryOrderNo(json.data.deliveryOrder?.orderNo || "");
+          setCustomerId(json.data.customerId);
+          setCustomerName(json.data.customer?.name || "");
           setRemark(json.data.remark || "");
         } else {
           toast.error(json.error || "加载销售单数据失败");
@@ -54,6 +59,8 @@ export function SalesFormDialog({
   function reset() {
     setDeliveryOrderId(null);
     setDeliveryOrderNo("");
+    setCustomerId(null);
+    setCustomerName("");
     setRemark("");
   }
 
@@ -62,13 +69,17 @@ export function SalesFormDialog({
       toast.error("请选择配送单");
       return;
     }
+    if (!isEdit && !customerId) {
+      toast.error("请选择客户");
+      return;
+    }
     setSubmitting(true);
     try {
       const url = isEdit ? `/api/sales/${salesId}` : "/api/sales";
       const method = isEdit ? "PUT" : "POST";
       const body = isEdit
         ? { remark }
-        : { deliveryOrderId, remark: remark || undefined };
+        : { deliveryOrderId, customerId, remark: remark || undefined };
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -130,7 +141,7 @@ export function SalesFormDialog({
               {!isEdit && (
                 <Button
                   size="sm"
-                  onClick={() => setPickerOpen(true)}
+                  onClick={() => setDeliveryPickerOpen(true)}
                   disabled={submitting}
                 >
                   选择
@@ -140,6 +151,36 @@ export function SalesFormDialog({
             {isEdit && (
               <p className="text-xs text-text-muted mt-1">
                 编辑模式下不可更改关联的配送单
+              </p>
+            )}
+          </div>
+
+          {/* 客户选择（仅新增模式可选） */}
+          <div>
+            <label className="block text-sm text-text-muted mb-1">
+              客户名称 {!isEdit && <span className="text-red-500">*</span>}
+            </label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={customerName}
+                placeholder="请选择客户"
+                readOnly
+                className="cursor-pointer"
+                disabled={isEdit}
+              />
+              {!isEdit && (
+                <Button
+                  size="sm"
+                  onClick={() => setCustomerPickerOpen(true)}
+                  disabled={submitting}
+                >
+                  选择
+                </Button>
+              )}
+            </div>
+            {isEdit && (
+              <p className="text-xs text-text-muted mt-1">
+                编辑模式下不可更改关联的客户
               </p>
             )}
           </div>
@@ -160,10 +201,10 @@ export function SalesFormDialog({
       {/* 配送单选择器（仅新增模式） */}
       {!isEdit && (
         <EntityPicker
-          open={pickerOpen}
-          onClose={() => setPickerOpen(false)}
+          open={deliveryPickerOpen}
+          onClose={() => setDeliveryPickerOpen(false)}
           onSelect={(item) => {
-            // 配送单 API 返回字段为 orderNo/customerName（无 name），
+            // 配送单 API 返回字段为 orderNo（无 name），
             // 此处从完整 item 中取 orderNo 作为单据编号回填输入框
             setDeliveryOrderId(item.id);
             setDeliveryOrderNo(item.orderNo as string);
@@ -171,7 +212,20 @@ export function SalesFormDialog({
           title="选择配送单"
           apiUrl="/api/delivery-orders"
           labelField="orderNo"
-          secondaryField="customerName"
+        />
+      )}
+
+      {/* 客户选择器（仅新增模式） */}
+      {!isEdit && (
+        <EntityPicker
+          open={customerPickerOpen}
+          onClose={() => setCustomerPickerOpen(false)}
+          onSelect={(item) => {
+            setCustomerId(item.id);
+            setCustomerName(item.name as string);
+          }}
+          title="选择客户"
+          apiUrl="/api/customers"
         />
       )}
     </Modal>
