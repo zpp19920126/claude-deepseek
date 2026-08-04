@@ -41,7 +41,12 @@ export function SalesFormDialog({
           setDeliveryOrderId(json.data.deliveryOrderId);
           setDeliveryOrderNo(json.data.deliveryOrder?.orderNo || "");
           setRemark(json.data.remark || "");
+        } else {
+          toast.error(json.error || "加载销售单数据失败");
         }
+      })
+      .catch(() => {
+        toast.error("网络错误，加载失败");
       })
       .finally(() => setLoading(false));
   }, [open, salesId]);

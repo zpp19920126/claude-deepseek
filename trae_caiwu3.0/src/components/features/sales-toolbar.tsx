@@ -74,6 +74,15 @@ export function SalesToolbar() {
         method: "POST",
         body: formData,
       });
+      if (!res.ok) {
+        toast.error(`导入失败（HTTP ${res.status}）`);
+        return;
+      }
+      const contentType = res.headers.get("Content-Type") || "";
+      if (!contentType.includes("application/json")) {
+        toast.error("服务器返回了非预期的响应");
+        return;
+      }
       const json = await res.json();
       if (json.success) {
         setImportResult({
