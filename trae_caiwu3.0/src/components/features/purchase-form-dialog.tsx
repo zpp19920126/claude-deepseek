@@ -115,7 +115,7 @@ export function PurchaseFormDialog({ open, onClose, purchaseId }: PurchaseFormDi
   }
 
   function updateItem(index: number, field: keyof PurchaseItem, value: string | number) {
-    setItems(items.map((it, i) => (i === index ? { ...it, [field]: value } : it)));
+    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, [field]: value } : it)));
   }
 
   async function handleSubmit() {
@@ -304,8 +304,8 @@ export function PurchaseFormDialog({ open, onClose, purchaseId }: PurchaseFormDi
                         <td className="px-2 py-2">
                           <Input
                             type="number"
-                            value={it.reservedQuantity}
-                            onChange={(e) => updateItem(index, "reservedQuantity", Number(e.target.value))}
+                            value={it.reservedQuantity || ""}
+                            onChange={(e) => updateItem(index, "reservedQuantity", e.target.value === "" ? 0 : Number(e.target.value))}
                             className="w-20 text-right"
                           />
                         </td>
@@ -321,8 +321,8 @@ export function PurchaseFormDialog({ open, onClose, purchaseId }: PurchaseFormDi
                         <td className="px-2 py-2">
                           <Input
                             type="number"
-                            value={it.receivedQuantity}
-                            onChange={(e) => updateItem(index, "receivedQuantity", Number(e.target.value))}
+                            value={it.receivedQuantity || ""}
+                            onChange={(e) => updateItem(index, "receivedQuantity", e.target.value === "" ? 0 : Number(e.target.value))}
                             className="w-20 text-right"
                           />
                         </td>
@@ -330,8 +330,8 @@ export function PurchaseFormDialog({ open, onClose, purchaseId }: PurchaseFormDi
                           <Input
                             type="number"
                             step="0.01"
-                            value={it.unitPrice}
-                            onChange={(e) => updateItem(index, "unitPrice", Number(e.target.value))}
+                            value={it.unitPrice || ""}
+                            onChange={(e) => updateItem(index, "unitPrice", e.target.value === "" ? 0 : Number(e.target.value))}
                             className="w-20 text-right"
                           />
                         </td>
