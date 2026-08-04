@@ -224,7 +224,14 @@ export default async function SalesPage({ searchParams }: PageProps) {
     {
       key: "salesNo",
       title: "销售单编码",
-      render: (row) => <span className="font-mono">{row.salesNo}</span>,
+      render: (row) => (
+        <Link
+          href={`/sales/${row.id}`}
+          className="font-mono text-primary hover:underline"
+        >
+          {row.salesNo}
+        </Link>
+      ),
     },
     {
       key: "customerName",

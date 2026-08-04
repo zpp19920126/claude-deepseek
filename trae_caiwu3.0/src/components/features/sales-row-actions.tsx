@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -47,6 +48,13 @@ export function SalesRowActions({ sale }: SalesRowActionsProps) {
   return (
     <>
       <div className="flex items-center gap-2">
+        <Link
+          href={`/sales/${sale.id}`}
+          className="text-primary hover:underline text-sm"
+        >
+          查看
+        </Link>
+        <span className="text-border">|</span>
         <button
           onClick={() => setEditOpen(true)}
           className="text-primary hover:underline text-sm"
