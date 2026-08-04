@@ -217,3 +217,48 @@ export const updateSalesOrderSchema = z.object({
 
 export type CreateSalesOrderInput = z.infer<typeof createSalesOrderSchema>;
 export type UpdateSalesOrderInput = z.infer<typeof updateSalesOrderSchema>;
+
+// ==================== 进货单 ====================
+const purchaseOrderItemSchema = z.object({
+  productId: z.number().int().positive("请选择商品"),
+  reservedQuantity: z.number().min(0, "预定数量不能为负"),
+  receivedQuantity: z.number().min(0, "实收数量不能为负"),
+  reservedUnitId: z.number().int().positive("请选择预定单位"),
+  receivedUnitId: z.number().int().positive("请选择实收单位"),
+  unitPrice: z.number().min(0, "单价不能为负"),
+});
+
+export const createPurchaseOrderSchema = z
+  .object({
+    supplierId: z.number().int().positive("请选择供应商"),
+    status: z
+      .enum(["pending", "received", "cancelled"])
+      .default("pending"),
+    remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
+    items: z.array(purchaseOrderItemSchema).min(1, "至少添加一条明细"),
+  })
+  .refine(
+    (data) =>
+      new Set(data.items.map((i) => i.productId)).size === data.items.length,
+    { message: "同一单据内不能有重复商品", path: ["items"] }
+  );
+
+export const updatePurchaseOrderSchema = z
+  .object({
+    supplierId: z.number().int().positive("请选择供应商").optional(),
+    status: z.enum(["pending", "received", "cancelled"]).optional(),
+    remark: z.string().max(500, "备注最长 500 字符").optional().nullable(),
+    items: z
+      .array(purchaseOrderItemSchema)
+      .min(1, "至少添加一条明细")
+      .optional(),
+  })
+  .refine(
+    (data) =>
+      !data.items ||
+      new Set(data.items.map((i) => i.productId)).size === data.items.length,
+    { message: "同一单据内不能有重复商品", path: ["items"] }
+  );
+
+export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>;
+export type UpdatePurchaseOrderInput = z.infer<typeof updatePurchaseOrderSchema>;
