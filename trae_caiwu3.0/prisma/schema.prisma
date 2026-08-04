@@ -47,9 +47,11 @@ model Unit {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products               Product[]
-  deliveryReservedItems  DeliveryOrderItem[] @relation("DeliveryReservedUnit")
-  deliveryDeliveryItems  DeliveryOrderItem[] @relation("DeliveryDeliveryUnit")
+  products                Product[]
+  deliveryReservedItems   DeliveryOrderItem[] @relation("DeliveryReservedUnit")
+  deliveryDeliveryItems   DeliveryOrderItem[] @relation("DeliveryDeliveryUnit")
+  purchaseReservedItems   PurchaseOrderItem[] @relation("PurchaseReservedUnit")
+  purchaseReceivedItems   PurchaseOrderItem[] @relation("PurchaseReceivedUnit")
 }
 
 // ==================== 商品 ====================
@@ -131,12 +133,10 @@ model SalesOrder {
 // ==================== 进货单 ====================
 model PurchaseOrder {
   id          Int      @id @default(autoincrement())
-  orderNo     String   @unique
+  orderNo     String   @unique // 自动生成：JH202608030001
   supplierId  Int
   userId      Int
-  totalAmount Float    @default(0)
-  status      String   @default("pending")
-  // pending(待收货) | received(已入库) | cancelled(已取消)
+  status      String   @default("pending") // pending(待收货) | received(已入库) | cancelled(已取消)
   remark      String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -147,15 +147,19 @@ model PurchaseOrder {
 }
 
 model PurchaseOrderItem {
-  id        Int   @id @default(autoincrement())
-  orderId   Int
-  productId Int
-  quantity  Float
-  cost      Float
-  subtotal  Float
+  id               Int   @id @default(autoincrement())
+  orderId          Int
+  productId        Int
+  reservedQuantity Float @default(0) // 预定数量
+  receivedQuantity Float @default(0) // 实收数量
+  reservedUnitId   Int             // 预定单位
+  receivedUnitId   Int             // 实收单位
+  unitPrice        Float           // 单价
 
-  order   PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product       @relation(fields: [productId], references: [id])
+  order        PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product       @relation(fields: [productId], references: [id])
+  reservedUnit Unit          @relation("PurchaseReservedUnit", fields: [reservedUnitId], references: [id])
+  receivedUnit Unit          @relation("PurchaseReceivedUnit", fields: [receivedUnitId], references: [id])
 }
 
 // ==================== 销售配送单 ====================

@@ -34,14 +34,15 @@ export default async function DashboardPage() {
         },
       },
     }),
-    // 今日进货
-    prisma.purchaseOrder.aggregate({
+    // 今日进货（含明细，用于计算金额）
+    prisma.purchaseOrder.findMany({
       where: {
         createdAt: { gte: todayStart, lt: todayEnd },
         status: { not: "cancelled" },
       },
-      _sum: { totalAmount: true },
-      _count: true,
+      select: {
+        items: { select: { receivedQuantity: true, unitPrice: true } },
+      },
     }),
     // 库存预警商品
     prisma.product.findMany({
@@ -70,7 +71,10 @@ export default async function DashboardPage() {
     }),
     // 最近进货单
     prisma.purchaseOrder.findMany({
-      include: { supplier: true },
+      include: {
+        supplier: true,
+        items: { select: { receivedQuantity: true, unitPrice: true } },
+      },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
@@ -102,8 +106,15 @@ export default async function DashboardPage() {
     },
     {
       label: "今日进货额",
-      value: formatCurrency(todayPurchases._sum.totalAmount || 0),
-      sub: `${todayPurchases._count} 笔订单`,
+      value: formatCurrency(
+        todayPurchases.reduce(
+          (sum, o) =>
+            sum +
+            o.items.reduce((s, it) => s + it.receivedQuantity * it.unitPrice, 0),
+          0
+        )
+      ),
+      sub: `${todayPurchases.length} 笔订单`,
       icon: "📦",
       color: "bg-info-light text-info",
     },
@@ -221,7 +232,12 @@ export default async function DashboardPage() {
                   </div>
                   <div className="text-right ml-4 shrink-0">
                     <p className="text-sm font-semibold text-text">
-                      {formatCurrency(order.totalAmount)}
+                      {formatCurrency(
+                        order.items.reduce(
+                          (s, it) => s + it.receivedQuantity * it.unitPrice,
+                          0
+                        )
+                      )}
                     </p>
                     <p className="text-xs text-text-muted mt-0.5">
                       {PURCHASE_ORDER_STATUS[order.status as keyof typeof PURCHASE_ORDER_STATUS] || order.status}
