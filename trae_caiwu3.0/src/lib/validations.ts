@@ -262,3 +262,42 @@ export const updatePurchaseOrderSchema = z
 
 export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>;
 export type UpdatePurchaseOrderInput = z.infer<typeof updatePurchaseOrderSchema>;
+
+// ==================== 统计 API 查询参数 ====================
+// H-4: 统计 API 输入校验，防止非法日期/分页参数导致 SQL 异常或 DoS
+const dateStringSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式必须为 YYYY-MM-DD")
+  .refine((s) => !isNaN(new Date(s).getTime()), "日期无效");
+
+export const statsDateRangeSchema = z
+  .object({
+    startDate: dateStringSchema.optional().nullable(),
+    endDate: dateStringSchema.optional().nullable(),
+  })
+  .refine(
+    (data) =>
+      !data.startDate ||
+      !data.endDate ||
+      new Date(data.startDate) <= new Date(data.endDate),
+    { message: "startDate 不能晚于 endDate", path: ["startDate"] }
+  );
+
+export const inventoryStatsQuerySchema = z.object({
+  onlyLowStock: z.enum(["true", "false"]).optional().default("true"),
+  page: z
+    .string()
+    .optional()
+    .default("1")
+    .transform((v) => Math.max(1, Number(v)))
+    .refine((n) => Number.isFinite(n), "page 必须为数字"),
+  pageSize: z
+    .string()
+    .optional()
+    .default("20")
+    .transform((v) => Math.min(100, Math.max(1, Number(v))))
+    .refine((n) => Number.isFinite(n), "pageSize 必须为数字"),
+});
+
+export type StatsDateRangeInput = z.infer<typeof statsDateRangeSchema>;
+export type InventoryStatsQueryInput = z.infer<typeof inventoryStatsQuerySchema>;
