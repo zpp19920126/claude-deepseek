@@ -22,15 +22,6 @@ export type PaginatedResponse<T> = {
   totalPages: number;
 };
 
-// 订单状态枚举
-export const SALES_ORDER_STATUS = {
-  pending: "待确认",
-  confirmed: "已确认",
-  delivered: "已配送",
-  paid: "已收款",
-  cancelled: "已取消",
-} as const;
-
 export const PURCHASE_ORDER_STATUS = {
   pending: "待收货",
   received: "已入库",
