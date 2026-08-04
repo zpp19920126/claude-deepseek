@@ -182,7 +182,7 @@ export default async function PurchasesPage({ searchParams }: PageProps) {
     {
       key: "reservedQuantity",
       title: "预定数量",
-      align: "right",
+      className: "text-right",
       render: (row) => <span>{row.reservedQuantity}</span>,
     },
     {
@@ -193,13 +193,13 @@ export default async function PurchasesPage({ searchParams }: PageProps) {
     {
       key: "receivedQuantity",
       title: "实收数量",
-      align: "right",
+      className: "text-right",
       render: (row) => <span className="font-medium">{row.receivedQuantity}</span>,
     },
     {
       key: "unitPrice",
       title: "单价",
-      align: "right",
+      className: "text-right",
       render: (row) => <span>{formatCurrency(row.unitPrice)}</span>,
     },
     {
@@ -231,7 +231,7 @@ export default async function PurchasesPage({ searchParams }: PageProps) {
     {
       key: "actions",
       title: "操作",
-      align: "right",
+      className: "text-right",
       render: (row) => (
         <PurchaseRowActions
           purchase={{ id: row.id, orderNo: row.orderNo }}
