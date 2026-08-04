@@ -163,11 +163,15 @@ export function SalesFormDialog({
           open={pickerOpen}
           onClose={() => setPickerOpen(false)}
           onSelect={(item) => {
+            // 配送单 API 返回字段为 orderNo/customerName（无 name），
+            // 此处从完整 item 中取 orderNo 作为单据编号回填输入框
             setDeliveryOrderId(item.id);
-            setDeliveryOrderNo(item.name);
+            setDeliveryOrderNo(item.orderNo as string);
           }}
           title="选择配送单"
           apiUrl="/api/delivery-orders"
+          labelField="orderNo"
+          secondaryField="customerName"
         />
       )}
     </Modal>

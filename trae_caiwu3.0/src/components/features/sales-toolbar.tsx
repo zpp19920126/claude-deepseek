@@ -23,7 +23,10 @@ export function SalesToolbar() {
 
   async function handleExport() {
     try {
-      const res = await fetch("/api/sales/export");
+      // 与 handlePrint 一致：把当前列表的 search 过滤参数透传给导出 API，
+      // 确保导出的是当前列表数据而非全量数据
+      const params = new URLSearchParams(window.location.search);
+      const res = await fetch(`/api/sales/export?${params.toString()}`);
       if (!res.ok) throw new Error("导出失败");
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") || "";

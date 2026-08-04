@@ -9,12 +9,19 @@ import { DELIVERY_ORDER_STATUS } from "@/types";
 
 // 导出销售单列表为 Excel（仅管理员）
 // 每行 = 一个销售单，含三种聚合金额
+// 支持 search 参数过滤（与列表页/打印页一致的 salesNo contains 条件）
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin();
     if (auth instanceof NextResponse) return auth;
 
+    // 读取搜索参数，构建与列表页/打印页相同的 where 条件
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search")?.trim() || "";
+    const where = search ? { salesNo: { contains: search } } : undefined;
+
     const orders = await prisma.salesOrder.findMany({
+      where,
       include: {
         customer: {
           select: { code: true, name: true, shortName: true },
